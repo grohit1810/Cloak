@@ -1,8 +1,6 @@
 # Cloak - Enterprise NER Extraction with Advanced Anonymization
 
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 **Cloak** is an enterprise-grade Named Entity Recognition (NER) pipeline that combines superior extraction capabilities with advanced anonymization features. Built for production environments that require both high-accuracy entity detection and robust privacy protection.
 
