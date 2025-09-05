@@ -1,0 +1,38 @@
+{
+  "person": [
+    "Alice Johnson",
+    "Bob Smith",
+    "Carol Davis",
+    "David Wilson",
+    "Eva Brown",
+    "Frank Miller",
+    "Grace Lee",
+    "Henry Chen",
+    "Ivy Taylor",
+    "Jack Anderson"
+  ],
+  "company": [
+    "TechCorp Inc",
+    "DataSoft LLC",
+    "InnovateCo",
+    "FutureTech Systems",
+    "GlobalSoft",
+    "NextGen Solutions",
+    "SmartData Corp",
+    "CloudTech Industries",
+    "AI Innovations",
+    "DigitalFirst Company"
+  ],
+  "location": [
+    "Downtown",
+    "Northside",
+    "Westfield",
+    "Eastgate",
+    "Southpoint",
+    "Central District",
+    "Riverside",
+    "Hillcrest",
+    "Parkview",
+    "Valley Center"
+  ]
+}

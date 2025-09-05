@@ -1,0 +1,18 @@
+# Core dependencies
+numpy>=1.21.0
+onnxruntime>=1.15.0
+transformers>=4.21.0
+tokenizers>=0.13.0
+faker>=18.0.0
+dataclasses-json>=0.5.7
+tqdm>=4.64.0
+
+# Optional: GPU support
+# onnxruntime-gpu>=1.15.0
+
+# Development dependencies (install with: pip install -r requirements-dev.txt)
+# pytest>=7.0
+# pytest-cov>=4.0
+# black>=22.0
+# flake8>=5.0
+# mypy>=0.991
