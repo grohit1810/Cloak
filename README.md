@@ -174,56 +174,6 @@ result = cloak.replace(
 )
 ```
 
-## 🏗️ Project Structure
-
-```
-Cloak/
-├── cloak.py                    # Main API entry point
-├── CloakExtraction.py          # Core orchestrator  
-├── main.py                     # CLI interface
-├── extraction/                 # NER extraction modules
-│   ├── extractor.py           # Multi-pass extraction
-│   ├── parallel_processor.py  # Parallel processing
-│   └── chunker.py             # Text chunking utilities
-├── utils/                      # Utility modules
-│   ├── cache_manager.py       # Advanced caching
-│   ├── entity_validator.py    # Validation pipeline
-│   └── merger.py              # Entity merging
-├── anonymization/              # Privacy protection
-│   ├── redactor.py            # Numbered redaction
-│   ├── replacer.py            # Synthetic replacement
-│   └── strategies/            # Replacement strategies
-│       ├── faker_strategy.py
-│       ├── country_strategy.py
-│       ├── date_strategy.py
-│       └── default_strategy.py
-├── data/                       # Reference data
-│   ├── countries.json
-│   └── replacements.json
-└── tests/                      # Test suite
-```
-
-## Roadmap
-
-### Phase 1: Core Features ✅
-- [x] Advanced entity extraction with validation
-- [x] Numbered redaction system
-- [x] Synthetic data replacement
-- [x] Multiple replacement strategies
-- [x] Comprehensive CLI interface
-
-### Phase 2: Integration Features 🚧  
-- [ ] Shield decorator for API protection
-- [ ] Re-identification system
-- [ ] Advanced LLM integration
-- [ ] Custom model support
-
-### Phase 3: Enterprise Features 📋
-- [ ] REST API server
-- [ ] Batch processing capabilities  
-- [ ] Advanced analytics dashboard
-- [ ] Enterprise security features
-
 
 ### Development Setup
 
