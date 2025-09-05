@@ -2,7 +2,7 @@
 
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 
-**Cloak** is an enterprise-grade Named Entity Recognition (NER) pipeline that combines superior extraction capabilities with advanced anonymization features. Built for production environments that require both high-accuracy entity detection and robust privacy protection.
+**Cloak** is an NER detection, redaction and anonymization pipeline built on the GLiNER‑X Large zero‑shot model(ONNX optimized). It delivers multilingual entity extraction (up to 23 languages), runtime‑configurable labels, identified/numbered redaction placeholders (e.g., #1_PERSON_REDACTED) with re‑identification mapping, and Faker‑powered PII replacements with document‑wide consistency. Designed for production workflows that require robust privacy protection without sacrificing accuracy.
 
 ## Key Features
 
