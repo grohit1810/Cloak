@@ -86,16 +86,16 @@ class CloakExtraction:
         self.strict_validation = strict_validation
         self.overlap_strategy = overlap_strategy
 
-        # Initialize components only when model_path is provided
+        # Lazy initialization — components created on first use
+        self.base_extractor = None
+        self.extractor = None
+        self.parallel_processor = None
+        self.merger = None
+        self.validator = None
+
+        # Initialize eagerly if model_path is provided
         if self.model_path:
             self._initialize_components()
-        else:
-            # Lazy initialization - components will be created when needed
-            self.base_extractor = None
-            self.extractor = None
-            self.parallel_processor = None
-            self.merger = None
-            self.validator = None
 
         logger.info("Cloak extraction pipeline initialization complete")
 
@@ -107,7 +107,7 @@ class CloakExtraction:
             from .models.gliner_model import GLiNERModel
 
             gliner_model = GLiNERModel(
-                model_path=str(self.model_path),
+                model_path=self.model_path,
                 use_onnx=self.use_onnx,
                 onnx_model_file=self.onnx_model_file,
             )
@@ -140,13 +140,16 @@ class CloakExtraction:
             raise
 
     def _ensure_initialized(self, model_path: str | None = None):
-        """Ensure components are initialized."""
+        """Ensure components are initialized.
+
+        If no model_path was provided at init or here, GLiNERModel
+        will use the default model (urchade/gliner_large-v2.1).
+        """
         if self.base_extractor is not None:
             return  # Already fully initialized
         if model_path:
             self.model_path = model_path
-        if self.model_path is None:
-            raise ValueError("Model path must be provided either during init or method call")
+        # model_path=None is fine — GLiNERModel defaults to DEFAULT_MODEL_ID
         self._initialize_components()
 
     def extract_entities(
