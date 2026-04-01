@@ -29,13 +29,13 @@ class TestEntityRedactor:
         result = redactor.redact("Hello world", [])
         assert result["anonymized_text"] == "Hello world"
 
-    def test_redact_without_re_id_map(self):
+    def test_redact_excludes_re_id_map_by_default(self):
         redactor = EntityRedactor()
         entities = [{"label": "person", "text": "John", "start": 0, "end": 4, "score": 0.9}]
-        result = redactor.redact("John works here", entities, include_re_id_map=False)
+        result = redactor.redact("John works here", entities)
         assert "re_identification_map" not in result
 
-    def test_redact_with_re_id_map(self):
+    def test_redact_includes_re_id_map_when_requested(self):
         redactor = EntityRedactor()
         entities = [{"label": "person", "text": "John", "start": 0, "end": 4, "score": 0.9}]
         result = redactor.redact("John works here", entities, include_re_id_map=True)

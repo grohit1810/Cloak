@@ -90,7 +90,7 @@ class EntityReplacer:
         if FAKER_AVAILABLE:
             self.faker = Faker(locale)
             if seed is not None:
-                Faker.seed(seed)
+                self.faker.seed_instance(seed)
         else:
             self.faker = None
 
@@ -351,10 +351,10 @@ class EntityReplacer:
         """Get replacement for an entity using appropriate strategy."""
         label = entity["label"].lower()
         original_text = entity["text"]
+        cache_key = (label, original_text)
 
         # Check consistency cache first
         if consistency:
-            cache_key = (label, original_text)
             if cache_key in self.replacement_cache:
                 cached_replacement, cached_strategy = self.replacement_cache[cache_key]
                 return cached_replacement, f"{cached_strategy}_cached"

@@ -77,7 +77,7 @@ class EntityRedactor:
         placeholder_format: Optional[str] = None,
         preserve_case: bool = False,
         consistent_ids: bool = True,
-        include_re_id_map: bool = True,
+        include_re_id_map: bool = False,
     ) -> Dict[str, Any]:
         """
         Redact entities in text with numbered placeholders.
@@ -89,6 +89,9 @@ class EntityRedactor:
             placeholder_format: Override default placeholder format
             preserve_case: Whether to preserve original text casing in placeholder
             consistent_ids: Whether to use consistent IDs for identical entities
+            include_re_id_map: Whether to include the re-identification map in the
+                result (default: False). Set to True only when reversibility is
+                explicitly required, as the map contains the original sensitive data.
 
         Returns:
             Dictionary with:
@@ -96,6 +99,7 @@ class EntityRedactor:
             - 'replacements': List of RedactionDetail objects
             - 'redaction_info': Metadata about the redaction process
             - 're_identification_map': Mapping for potential reversibility
+                (only present when include_re_id_map=True)
         """
         if not entities:
             result = {
