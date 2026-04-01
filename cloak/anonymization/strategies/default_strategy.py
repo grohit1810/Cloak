@@ -11,7 +11,7 @@ Version: 1.0.0
 import logging
 import random
 import string
-from typing import Any, Dict
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ class DefaultReplacementStrategy:
         """This strategy can handle any label as fallback."""
         return True
 
-    def get_replacement(self, entity: Dict[str, Any]) -> str:
+    def get_replacement(self, entity: dict[str, Any]) -> str:
         """
         Generate a generic replacement for any entity.
 

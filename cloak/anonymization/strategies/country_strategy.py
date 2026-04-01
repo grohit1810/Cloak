@@ -12,7 +12,7 @@ import json
 import logging
 import random
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ class CountryReplacementStrategy:
         self.countries = self._load_countries()
         self.supported_labels = {"country", "location", "nationality", "place"}
 
-    def _load_countries(self) -> List[str]:
+    def _load_countries(self) -> list[str]:
         """Load country list from data file or use default list."""
         try:
             # Try to load from data file
@@ -39,7 +39,7 @@ class CountryReplacementStrategy:
 
         return self._get_default_countries()
 
-    def _get_default_countries(self) -> List[str]:
+    def _get_default_countries(self) -> list[str]:
         """Get default list of countries."""
         return [
             "United States",
@@ -88,7 +88,7 @@ class CountryReplacementStrategy:
         """Check if this strategy can handle the given label."""
         return label.lower() in self.supported_labels
 
-    def get_replacement(self, entity: Dict[str, Any]) -> Optional[str]:
+    def get_replacement(self, entity: dict[str, Any]) -> str | None:
         """
         Generate a country/location replacement.
 

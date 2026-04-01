@@ -9,7 +9,7 @@ Version: 1.0.0
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +65,7 @@ class FakerReplacementStrategy:
         """Check if this strategy can handle the given label."""
         return self.faker is not None and label.lower() in self.supported_labels
 
-    def get_replacement(self, entity: Dict[str, Any]) -> Optional[str]:
+    def get_replacement(self, entity: dict[str, Any]) -> str | None:
         """
         Generate a replacement using Faker.
 
