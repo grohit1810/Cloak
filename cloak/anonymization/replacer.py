@@ -46,6 +46,17 @@ class ReplacementDetail:
     score: float
     strategy_used: str
 
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "label": self.label,
+            "original": self.original,
+            "replacement": self.replacement,
+            "start": self.start,
+            "end": self.end,
+            "score": self.score,
+            "strategy_used": self.strategy_used,
+        }
+
 
 class EntityReplacer:
     """
@@ -59,21 +70,27 @@ class EntityReplacer:
     - Fallback mechanisms
     """
 
-    def __init__(self, locale: str = "en_US", ensure_consistency: bool = True):
+    def __init__(
+        self, locale: str = "en_US", ensure_consistency: bool = True, seed: int | None = None
+    ):
         """
         Initialize the entity replacer.
 
         Args:
             locale: Faker locale for data generation (default: 'en_US')
             ensure_consistency: Whether to ensure consistent replacements (default: True)
+            seed: Optional seed for Faker's random generator for reproducible output
         """
         self.locale = locale
         self.ensure_consistency = ensure_consistency
+        self.seed = seed
         self.replacement_cache = {}  # Cache for consistent replacements
 
         # Initialize Faker if available
         if FAKER_AVAILABLE:
             self.faker = Faker(locale)
+            if seed is not None:
+                Faker.seed(seed)
         else:
             self.faker = None
 

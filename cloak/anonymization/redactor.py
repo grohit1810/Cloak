@@ -31,6 +31,17 @@ class RedactionDetail:
     score: float
     redaction_id: str
 
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "label": self.label,
+            "original": self.original,
+            "placeholder": self.placeholder,
+            "start": self.start,
+            "end": self.end,
+            "score": self.score,
+            "redaction_id": self.redaction_id,
+        }
+
 
 class EntityRedactor:
     """
@@ -66,6 +77,7 @@ class EntityRedactor:
         placeholder_format: Optional[str] = None,
         preserve_case: bool = False,
         consistent_ids: bool = True,
+        include_re_id_map: bool = True,
     ) -> Dict[str, Any]:
         """
         Redact entities in text with numbered placeholders.
@@ -86,12 +98,14 @@ class EntityRedactor:
             - 're_identification_map': Mapping for potential reversibility
         """
         if not entities:
-            return {
+            result = {
                 "anonymized_text": text,
                 "replacements": [],
                 "redaction_info": {"entities_processed": 0, "redactions_applied": 0},
-                "re_identification_map": {},
             }
+            if include_re_id_map:
+                result["re_identification_map"] = {}
+            return result
 
         format_str = placeholder_format or self.default_format
         logger.info(f"Starting redaction of {len(entities)} entities")
@@ -170,8 +184,9 @@ class EntityRedactor:
                 "consistent_ids": consistent_ids,
                 "unique_entities": len(set((d.label, d.original) for d in redaction_details)),
             },
-            "re_identification_map": re_identification_map,
         }
+        if include_re_id_map:
+            result["re_identification_map"] = re_identification_map
 
         logger.info(f"Redaction complete: {len(redaction_details)} redactions applied")
         return result
@@ -238,15 +253,13 @@ class EntityRedactor:
         # Apply redaction to each text
         results = []
         for i, (text, entities) in enumerate(zip(texts, all_entities)):
-            # Temporarily override entity map for consistency
             old_map = self.entity_id_map.copy()
-            self.entity_id_map = global_entity_map
-
-            result = self.redact(text, entities, **kwargs)
-            results.append(result)
-
-            # Restore original map
-            self.entity_id_map = old_map
+            try:
+                self.entity_id_map = global_entity_map
+                result = self.redact(text, entities, **kwargs)
+                results.append(result)
+            finally:
+                self.entity_id_map = old_map
 
             logger.debug(f"Completed redaction for text {i + 1}/{len(texts)}")
 
