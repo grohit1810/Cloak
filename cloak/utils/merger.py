@@ -175,10 +175,11 @@ class EntityMerger:
             "reduction_percentage": reduction_percentage,
             "original_by_label": original_by_label,
             "merged_by_label": merged_by_label,
-            "global_stats": self.merge_stats,
+            "global_stats": self.merge_stats.copy(),
         }
 
     def reset_statistics(self):
         """Reset merge statistics."""
-        self.merge_stats = {"total_processed": 0, "total_merged": 0, "merges_by_label": {}}
+        with self._lock:
+            self.merge_stats = {"total_processed": 0, "total_merged": 0, "merges_by_label": {}}
         logger.info("Merge statistics reset")

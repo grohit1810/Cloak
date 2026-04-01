@@ -164,7 +164,7 @@ class CachedEntityExtractor:
         if not use_cache:
             return self._uncached_predict(text, labels)
 
-        # Convert labels to tuple for caching
+        # Labels are sorted to normalize the cache key — GLiNER output is label-order-independent
         labels_tuple = tuple(sorted(labels)) if labels else tuple()
 
         try:

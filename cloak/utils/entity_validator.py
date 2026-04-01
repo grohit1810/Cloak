@@ -217,7 +217,7 @@ class EntityValidator:
 
         except Exception as e:
             logger.error(f"Entity cleaning error: {str(e)}")
-            return entity
+            return copy.deepcopy(entity)
 
     def resolve_overlaps(
         self, entities: List[Dict[str, Any]], strategy: str = "highest_confidence"
@@ -238,7 +238,7 @@ class EntityValidator:
         try:
             overlaps = self._detect_overlaps(entities)
             if not overlaps:
-                return entities.copy()
+                return [copy.deepcopy(e) for e in entities]
 
             logger.info(
                 f"Resolving {len(overlaps)} overlapping entity pairs using '{strategy}' strategy"

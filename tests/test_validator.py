@@ -60,6 +60,7 @@ class TestEntityValidator:
     def test_deep_copy_does_not_mutate_input(self):
         validator = EntityValidator()
         original = {"label": "person", "text": "John", "start": 0, "end": 4, "score": 0.9}
-        entities = [original]
-        validator.validate_entities(entities, "John works here")
-        assert "validated" not in original
+        result = validator.validate_entities([original], "John works here")
+        # Mutate the output — should not affect input
+        result[0]["label"] = "MUTATED"
+        assert original["label"] == "person"

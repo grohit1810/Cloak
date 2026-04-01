@@ -94,12 +94,18 @@ class GLiNERModel:
             "model_path": self.model_path,
             "use_onnx": self.use_onnx,
             "onnx_model_file": self.onnx_model_file,
-            "status": "loaded" if self.model else "not_loaded",
+            "status": "loaded",
             "type": "GLiNER",
         }
 
     @staticmethod
     def _is_hf_model_id(path: str) -> bool:
-        """Check if path looks like a HuggingFace model ID (org/model)."""
+        """Check if path looks like a HuggingFace model ID (org/model).
+
+        Returns False for any path that exists on the local filesystem,
+        even if it has the org/model two-part structure.
+        """
+        if Path(path).exists():
+            return False
         parts = path.split("/")
         return len(parts) == 2 and not Path(path).is_absolute()

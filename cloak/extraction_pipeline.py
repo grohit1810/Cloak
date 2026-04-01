@@ -33,6 +33,8 @@ from .utils.merger import EntityMerger
 
 logger = logging.getLogger(__name__)
 
+VALID_OVERLAP_STRATEGIES = {"highest_confidence", "longest", "first"}
+
 
 class CloakExtraction:
     """
@@ -68,6 +70,12 @@ class CloakExtraction:
                 ("highest_confidence", "longest", "first")
         """
         logger.info("Initializing Cloak extraction pipeline")
+
+        if overlap_strategy not in VALID_OVERLAP_STRATEGIES:
+            raise ValueError(
+                f"Invalid overlap_strategy '{overlap_strategy}'. "
+                f"Must be one of: {VALID_OVERLAP_STRATEGIES}"
+            )
 
         self.model_path = model_path
         self.onnx_model_file = onnx_model_file

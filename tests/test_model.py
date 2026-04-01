@@ -113,3 +113,11 @@ class TestGLiNERModel:
         assert GLiNERModel._is_hf_model_id("/absolute/path") is False
         assert GLiNERModel._is_hf_model_id("just-a-name") is False
         assert GLiNERModel._is_hf_model_id("org/model/extra") is False
+
+    def test_is_hf_model_id_rejects_existing_relative_path(self):
+        # "cloak/models" is a relative path that exists in the repo
+        # and has 2 slash-separated parts, so old code would misclassify it
+        import os
+
+        if os.path.exists("cloak/models"):
+            assert GLiNERModel._is_hf_model_id("cloak/models") is False
