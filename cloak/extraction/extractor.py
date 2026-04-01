@@ -12,6 +12,13 @@ import logging
 import warnings
 from typing import Any, Dict, List, Optional
 
+from ..constants import (
+    DEFAULT_LABELS,
+    DEFAULT_MAX_PASSES,
+    FIRST_PASS_THRESHOLD,
+    SUBSEQUENT_PASS_THRESHOLD,
+)
+
 # Placeholder for GLiNERONNXModel - would need to be implemented
 # from models.gliner_onnx import GLiNERONNXModel
 
@@ -52,7 +59,7 @@ class EntityExtractor:
             raise
 
     def predict(
-        self, text: str, labels: Optional[List[str]] = None, max_passes: int = 2
+        self, text: str, labels: Optional[List[str]] = None, max_passes: int = DEFAULT_MAX_PASSES
     ) -> List[Dict[str, Any]]:
         """
         Iteratively finds entities by masking found entities and re-running the model.
@@ -72,7 +79,7 @@ class EntityExtractor:
 
         # Use default labels if none provided
         if labels is None:
-            labels = ["person", "date", "location", "organization"]
+            labels = DEFAULT_LABELS
 
         # Convert labels to lowercase (works best for gliner models)
         processed_labels = [label.lower() for label in labels]
@@ -93,10 +100,10 @@ class EntityExtractor:
                 # Determine threshold based on pass number - ENHANCED: decreasing thresholds
                 if pass_num == 0:
                     # First pass: higher threshold for confident predictions
-                    threshold = 0.5
+                    threshold = FIRST_PASS_THRESHOLD
                 else:
                     # Subsequent passes: lower threshold for broader coverage
-                    threshold = 0.30
+                    threshold = SUBSEQUENT_PASS_THRESHOLD
 
                 # Placeholder for actual model prediction
                 # newly_found_entities = self.model.predict_entities(

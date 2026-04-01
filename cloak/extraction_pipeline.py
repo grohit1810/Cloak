@@ -18,14 +18,20 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from .constants import (
+    DEFAULT_CACHE_SIZE,
+    DEFAULT_CHUNK_SIZE,
+    DEFAULT_LABELS,
+    DEFAULT_MAX_PASSES,
+    DEFAULT_MAX_WORKERS,
+    DEFAULT_MIN_CONFIDENCE,
+)
 from .extraction.extractor import EntityExtractor
 from .extraction.parallel_processor import ParallelEntityProcessor
 from .utils.cache_manager import CachedEntityExtractor
 from .utils.entity_validator import EntityValidator
 from .utils.merger import EntityMerger
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -42,8 +48,8 @@ class CloakExtraction:
         model_path: Optional[str] = None,
         onnx_model_file: str = "model.onnx",
         use_caching: bool = True,
-        cache_size: int = 128,
-        min_confidence: float = 0.3,
+        cache_size: int = DEFAULT_CACHE_SIZE,
+        min_confidence: float = DEFAULT_MIN_CONFIDENCE,
         strict_validation: bool = True,
         overlap_strategy: str = "highest_confidence",
     ):
@@ -71,6 +77,7 @@ class CloakExtraction:
 
         self.onnx_model_file = onnx_model_file
         self.use_caching = use_caching
+        self.cache_size = cache_size
         self.min_confidence = min_confidence
         self.strict_validation = strict_validation
         self.overlap_strategy = overlap_strategy
@@ -98,8 +105,8 @@ class CloakExtraction:
 
             # Setup caching wrapper if enabled
             if self.use_caching:
-                self.extractor = CachedEntityExtractor(self.base_extractor, 128)
-                logger.info(f"Caching enabled with size {128}")
+                self.extractor = CachedEntityExtractor(self.base_extractor, self.cache_size)
+                logger.info(f"Caching enabled with size {self.cache_size}")
             else:
                 self.extractor = self.base_extractor
                 logger.info("Caching disabled")
@@ -142,10 +149,10 @@ class CloakExtraction:
         self,
         text: str,
         labels: Optional[List[str]] = None,
-        max_passes: int = 2,
+        max_passes: int = DEFAULT_MAX_PASSES,
         use_parallel: Optional[bool] = None,
-        chunk_size: int = 600,
-        max_workers: int = 4,
+        chunk_size: int = DEFAULT_CHUNK_SIZE,
+        max_workers: int = DEFAULT_MAX_WORKERS,
         merge_entities: bool = True,
         use_cache: bool = True,
         min_confidence: Optional[float] = None,
@@ -182,7 +189,7 @@ class CloakExtraction:
 
         # Set default labels if none provided
         if labels is None:
-            labels = ["person", "date", "location", "organization"]
+            labels = DEFAULT_LABELS
 
         logger.info("Starting entity extraction:")
         logger.info(f"- Text length: {len(text)} characters")

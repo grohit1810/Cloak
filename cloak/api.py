@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from .anonymization.redactor import EntityRedactor
 from .anonymization.replacer import EntityReplacer
+from .constants import DEFAULT_LABELS
 from .extraction_pipeline import CloakExtraction
 
 # Global instances for caching across calls
@@ -70,9 +71,7 @@ def extract(
         kwargs["model_path"] = model_path
 
     cloak_instance = _get_global_cloak_instance(**kwargs)
-    return cloak_instance.extract_entities(
-        text, labels or ["person", "date", "location", "organization"]
-    )
+    return cloak_instance.extract_entities(text, labels or DEFAULT_LABELS)
 
 
 def redact(
@@ -111,9 +110,7 @@ def redact(
         kwargs["model_path"] = model_path
 
     cloak_instance = _get_global_cloak_instance(**kwargs)
-    extraction_result = cloak_instance.extract_entities(
-        text, labels or ["person", "date", "location", "organization"]
-    )
+    extraction_result = cloak_instance.extract_entities(text, labels or DEFAULT_LABELS)
 
     # Then redact them
     redactor = _get_global_redactor_instance()
@@ -168,9 +165,7 @@ def replace(
         kwargs["model_path"] = model_path
 
     cloak_instance = _get_global_cloak_instance(**kwargs)
-    extraction_result = cloak_instance.extract_entities(
-        text, labels or ["person", "date", "location", "organization"]
-    )
+    extraction_result = cloak_instance.extract_entities(text, labels or DEFAULT_LABELS)
 
     # Then replace them
     replacer = _get_global_replacer_instance()
@@ -226,9 +221,7 @@ def replace_with_data(
         kwargs["model_path"] = model_path
 
     cloak_instance = _get_global_cloak_instance(**kwargs)
-    extraction_result = cloak_instance.extract_entities(
-        text, labels or ["person", "date", "location", "organization"]
-    )
+    extraction_result = cloak_instance.extract_entities(text, labels or DEFAULT_LABELS)
 
     # Then replace with user data
     replacer = _get_global_replacer_instance()
