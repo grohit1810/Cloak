@@ -10,12 +10,11 @@ Version: 1.0.0
 
 import logging
 import re
-from typing import List, Tuple
 
 logger = logging.getLogger(__name__)
 
 
-def chunk_text(text: str, chunk_size: int = 600) -> List[Tuple[str, int]]:
+def chunk_text(text: str, chunk_size: int = 600) -> list[tuple[str, int]]:
     """
     Splits text into slices of up to `chunk_size` words, preserving original spacing.
 
@@ -33,7 +32,7 @@ def chunk_text(text: str, chunk_size: int = 600) -> List[Tuple[str, int]]:
         return []
 
     if chunk_size <= 0:
-        logger.warning(f"Invalid chunk_size: {chunk_size}. Using default 600.")
+        logger.warning("Invalid chunk_size: %d. Using default 600.", chunk_size)
         chunk_size = 600
 
     try:
@@ -44,7 +43,7 @@ def chunk_text(text: str, chunk_size: int = 600) -> List[Tuple[str, int]]:
             logger.warning("No words found in text")
             return []
 
-        chunks: List[Tuple[str, int]] = []
+        chunks: list[tuple[str, int]] = []
 
         for i in range(0, len(word_spans), chunk_size):
             # Determine spans for this chunk
@@ -61,11 +60,11 @@ def chunk_text(text: str, chunk_size: int = 600) -> List[Tuple[str, int]]:
             chunk_str = text[start_char:end_char]
             chunks.append((chunk_str, start_char))
 
-        logger.info(f"Text chunked into {len(chunks)} chunks (chunk_size={chunk_size} words)")
+        logger.info("Text chunked into %d chunks (chunk_size=%d words)", len(chunks), chunk_size)
         return chunks
 
     except Exception as e:
-        logger.error(f"Error chunking text: {str(e)}")
+        logger.error("Error chunking text: %s", str(e))
         return []
 
 
@@ -88,11 +87,11 @@ def estimate_chunk_count(text: str, chunk_size: int = 600) -> int:
         return (total_words + chunk_size - 1) // chunk_size
 
     except Exception as e:
-        logger.error(f"Error estimating chunk count: {str(e)}")
+        logger.error("Error estimating chunk count: %s", str(e))
         return 0
 
 
-def validate_chunks(chunks: List[Tuple[str, int]], original_text: str) -> bool:
+def validate_chunks(chunks: list[tuple[str, int]], original_text: str) -> bool:
     """
     Validate that the concatenation of chunk_strs matches the corresponding
     sections of original_text in sequence.
@@ -111,29 +110,29 @@ def validate_chunks(chunks: List[Tuple[str, int]], original_text: str) -> bool:
         for chunk_str, offset in chunks:
             # Check that the substring at offset matches chunk_str
             if offset < 0 or offset >= len(original_text):
-                logger.error(f"Invalid chunk offset: {offset}")
+                logger.error("Invalid chunk offset: %d", offset)
                 return False
 
             expected_end = offset + len(chunk_str)
             if expected_end > len(original_text):
                 logger.error(
-                    f"Chunk extends beyond text length: {expected_end} > {len(original_text)}"
+                    "Chunk extends beyond text length: %d > %d", expected_end, len(original_text)
                 )
                 return False
 
             if original_text[offset:expected_end] != chunk_str:
-                logger.error(f"Mismatch at offset {offset}")
+                logger.error("Mismatch at offset %d", offset)
                 return False
 
         logger.info("Chunk validation passed")
         return True
 
     except Exception as e:
-        logger.error(f"Error validating chunks: {str(e)}")
+        logger.error("Error validating chunks: %s", str(e))
         return False
 
 
-def get_chunk_info(chunks: List[Tuple[str, int]]) -> dict:
+def get_chunk_info(chunks: list[tuple[str, int]]) -> dict:
     """
     Get statistics about the chunks.
 
@@ -169,5 +168,5 @@ def get_chunk_info(chunks: List[Tuple[str, int]]) -> dict:
         }
 
     except Exception as e:
-        logger.error(f"Error getting chunk info: {str(e)}")
+        logger.error("Error getting chunk info: %s", str(e))
         return {"error": str(e)}

@@ -15,7 +15,7 @@ Version: 1.0.0
 import logging
 import re
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from .constants import (
     DEFAULT_CACHE_SIZE,
@@ -46,7 +46,7 @@ class CloakExtraction:
 
     def __init__(
         self,
-        model_path: Optional[str] = None,
+        model_path: str | None = None,
         onnx_model_file: str = "model.onnx",
         use_onnx: bool = True,
         use_caching: bool = True,
@@ -139,7 +139,7 @@ class CloakExtraction:
             logger.error("Failed to initialize components: %s", e)
             raise
 
-    def _ensure_initialized(self, model_path: Optional[str] = None):
+    def _ensure_initialized(self, model_path: str | None = None):
         """Ensure components are initialized."""
         if self.base_extractor is not None:
             return  # Already fully initialized
@@ -152,18 +152,18 @@ class CloakExtraction:
     def extract_entities(
         self,
         text: str,
-        labels: Optional[List[str]] = None,
+        labels: list[str] | None = None,
         max_passes: int = DEFAULT_MAX_PASSES,
-        use_parallel: Optional[bool] = None,
+        use_parallel: bool | None = None,
         chunk_size: int = DEFAULT_CHUNK_SIZE,
         max_workers: int = DEFAULT_MAX_WORKERS,
         merge_entities: bool = True,
         use_cache: bool = True,
-        min_confidence: Optional[float] = None,
+        min_confidence: float | None = None,
         enable_validation: bool = True,
         resolve_overlaps: bool = True,
-        model_path: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        model_path: str | None = None,
+    ) -> dict[str, Any]:
         """
         Extract entities from text with advanced validation and processing.
 
@@ -196,10 +196,10 @@ class CloakExtraction:
             labels = DEFAULT_LABELS
 
         logger.info("Starting entity extraction:")
-        logger.info(f"- Text length: {len(text)} characters")
-        logger.info(f"- Labels: {labels}")
-        logger.info(f"- Validation enabled: {enable_validation}")
-        logger.info(f"- Overlap resolution: {resolve_overlaps}")
+        logger.info("- Text length: %d characters", len(text))
+        logger.info("- Labels: %s", labels)
+        logger.info("- Validation enabled: %s", enable_validation)
+        logger.info("- Overlap resolution: %s", resolve_overlaps)
 
         start_time = time.time()
 
@@ -210,7 +210,7 @@ class CloakExtraction:
                 use_parallel = word_count > chunk_size
 
             method_used = "parallel" if use_parallel else "single-pass"
-            logger.info(f"- Processing method: {method_used}")
+            logger.info("- Processing method: %s", method_used)
 
             # Extract entities
             if use_parallel:
@@ -236,7 +236,7 @@ class CloakExtraction:
                     )
             passes_completed = max_passes
 
-            logger.info(f"- Raw entities found: {len(entities)}")
+            logger.info("- Raw entities found: %d", len(entities))
 
             # Entity validation pipeline
             validation_stats = {}
@@ -261,7 +261,7 @@ class CloakExtraction:
                 original_count = len(entities)
                 entities = self.merger.merge(entities, text)
                 logger.info(
-                    f"- Entities after merging: {len(entities)} (reduced from {original_count})"
+                    "- Entities after merging: %d (reduced from %d)", len(entities), original_count
                 )
 
             processing_time = time.time() - start_time
@@ -293,16 +293,16 @@ class CloakExtraction:
             if self.use_caching and hasattr(self.extractor, "get_cache_info"):
                 result["processing_info"]["cache_stats"] = self.extractor.get_cache_info()
 
-            logger.info(f"Extraction completed in {processing_time:.3f} seconds")
-            logger.info(f"Found {len(entities)} entities using {method_used} processing")
+            logger.info("Extraction completed in %.3f seconds", processing_time)
+            logger.info("Found %d entities using %s processing", len(entities), method_used)
 
             return result
 
         except Exception as e:
-            logger.error(f"Error during entity extraction: {str(e)}")
+            logger.error("Error during entity extraction: %s", str(e))
             raise
 
-    def _empty_result(self) -> Dict[str, Any]:
+    def _empty_result(self) -> dict[str, Any]:
         """Return empty result structure."""
         return {
             "entities": [],
@@ -318,7 +318,7 @@ class CloakExtraction:
             },
         }
 
-    def get_system_info(self) -> Dict[str, Any]:
+    def get_system_info(self) -> dict[str, Any]:
         """Get comprehensive information about the system configuration."""
         try:
             # Ensure components are initialized for info gathering
@@ -363,7 +363,7 @@ class CloakExtraction:
             return info
 
         except Exception as e:
-            logger.error(f"Error gathering system info: {str(e)}")
+            logger.error("Error gathering system info: %s", str(e))
             return {"error": str(e)}
 
     def clear_cache(self):

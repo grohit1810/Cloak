@@ -10,7 +10,7 @@ Version: 1.0.0
 
 import functools
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ class CacheManager:
         self.cache_misses = 0
         self.total_requests = 0
 
-        logger.info(f"CacheManager initialized with maxsize: {maxsize}")
+        logger.info("CacheManager initialized with maxsize: %d", maxsize)
 
     def create_cached_extractor(self, extractor_func):
         """
@@ -50,7 +50,7 @@ class CacheManager:
         """
 
         @functools.lru_cache(maxsize=self.maxsize)
-        def cached_extractor(text: str, labels_tuple: Tuple[str, ...]):
+        def cached_extractor(text: str, labels_tuple: tuple[str, ...]):
             """
             Cached extraction function.
             Labels must be passed as a tuple for caching to work.
@@ -63,7 +63,7 @@ class CacheManager:
         # Wrap to handle cache hit tracking
         original_cached = cached_extractor
 
-        def tracking_cached_extractor(text: str, labels_tuple: Tuple[str, ...]):
+        def tracking_cached_extractor(text: str, labels_tuple: tuple[str, ...]):
             # Track total requests
             self.total_requests += 1
 
@@ -86,7 +86,7 @@ class CacheManager:
 
         return tracking_cached_extractor
 
-    def get_cache_stats(self) -> Dict[str, Any]:
+    def get_cache_stats(self) -> dict[str, Any]:
         """
         Get cache performance statistics.
 
@@ -137,19 +137,19 @@ class CachedEntityExtractor:
         # Create cached version of the predict method
         self._cached_predict = self.cache_manager.create_cached_extractor(self._uncached_predict)
 
-        logger.info(f"CachedEntityExtractor initialized with cache size {maxsize}")
+        logger.info("CachedEntityExtractor initialized with cache size %d", maxsize)
 
-    def _uncached_predict(self, text: str, labels: Optional[List[str]]) -> List[Dict[str, Any]]:
+    def _uncached_predict(self, text: str, labels: list[str] | None) -> list[dict[str, Any]]:
         """Internal method that performs actual prediction without caching."""
         try:
             return self.extractor.predict(text, labels)
         except Exception as e:
-            logger.error(f"Prediction failed in cached extractor: {str(e)}")
+            logger.error("Prediction failed in cached extractor: %s", str(e))
             return []
 
     def predict(
-        self, text: str, labels: Optional[List[str]] = None, use_cache: bool = True
-    ) -> List[Dict[str, Any]]:
+        self, text: str, labels: list[str] | None = None, use_cache: bool = True
+    ) -> list[dict[str, Any]]:
         """
         Predict entities with optional caching.
 
@@ -170,11 +170,11 @@ class CachedEntityExtractor:
         try:
             return self._cached_predict(text, labels_tuple)
         except Exception as e:
-            logger.error(f"Cached prediction failed: {str(e)}")
+            logger.error("Cached prediction failed: %s", str(e))
             # Fallback to uncached prediction
             return self._uncached_predict(text, labels)
 
-    def get_cache_info(self) -> Dict[str, Any]:
+    def get_cache_info(self) -> dict[str, Any]:
         """
         Get detailed cache information including built-in lru_cache stats.
 
@@ -196,7 +196,7 @@ class CachedEntityExtractor:
                 "manager_stats": manager_stats,
             }
         except Exception as e:
-            logger.error(f"Failed to get cache info: {str(e)}")
+            logger.error("Failed to get cache info: %s", str(e))
             return {"error": str(e)}
 
     def clear_cache(self):
@@ -206,12 +206,12 @@ class CachedEntityExtractor:
             self.cache_manager.clear_stats()
             logger.info("Cache cleared successfully")
         except Exception as e:
-            logger.error(f"Failed to clear cache: {str(e)}")
+            logger.error("Failed to clear cache: %s", str(e))
 
-    def get_model_info(self) -> Dict[str, str]:
+    def get_model_info(self) -> dict[str, str]:
         """Get information about the underlying model."""
         try:
             return self.extractor.get_model_info()
         except Exception as e:
-            logger.error(f"Failed to get model info: {str(e)}")
+            logger.error("Failed to get model info: %s", str(e))
             return {"error": str(e)}

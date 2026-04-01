@@ -14,7 +14,7 @@ Version: 1.0.0
 import logging
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -67,18 +67,18 @@ class EntityRedactor:
         self.used_ids_per_label = defaultdict(set)  # Tracks used IDs per label
         self.redaction_history = []  # Track all redactions
 
-        logger.info(f"EntityRedactor initialized with format: {default_format}")
+        logger.info("EntityRedactor initialized with format: %s", default_format)
 
     def redact(
         self,
         text: str,
-        entities: List[Dict[str, Any]],
+        entities: list[dict[str, Any]],
         numbered: bool = True,
-        placeholder_format: Optional[str] = None,
+        placeholder_format: str | None = None,
         preserve_case: bool = False,
         consistent_ids: bool = True,
         include_re_id_map: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Redact entities in text with numbered placeholders.
 
@@ -112,8 +112,8 @@ class EntityRedactor:
             return result
 
         format_str = placeholder_format or self.default_format
-        logger.info(f"Starting redaction of {len(entities)} entities")
-        logger.info(f"Using format: {format_str}")
+        logger.info("Starting redaction of %d entities", len(entities))
+        logger.info("Using format: %s", format_str)
 
         # Sort entities by start position (reverse order for safe replacement)
         sorted_entities = sorted(entities, key=lambda x: x["start"], reverse=True)
@@ -168,10 +168,10 @@ class EntityRedactor:
                 # Build re-identification map
                 re_identification_map[placeholder] = original_text
 
-                logger.debug(f"Redacted '{original_text}' -> '{placeholder}'")
+                logger.debug("Redacted '%s' -> '%s'", original_text, placeholder)
 
             except Exception as e:
-                logger.error(f"Error redacting entity {entity}: {str(e)}")
+                logger.error("Error redacting entity %s: %s", entity, str(e))
                 continue
 
         # Sort redaction details by original position for output
@@ -192,10 +192,10 @@ class EntityRedactor:
         if include_re_id_map:
             result["re_identification_map"] = re_identification_map
 
-        logger.info(f"Redaction complete: {len(redaction_details)} redactions applied")
+        logger.info("Redaction complete: %d redactions applied", len(redaction_details))
         return result
 
-    def _build_entity_id_map(self, entities: List[Dict[str, Any]]) -> Dict[Tuple[str, str], str]:
+    def _build_entity_id_map(self, entities: list[dict[str, Any]]) -> dict[tuple[str, str], str]:
         """Build consistent ID mapping for entities."""
         entity_to_id = {}
 
@@ -226,8 +226,8 @@ class EntityRedactor:
         return str(candidate_id)
 
     def batch_redact(
-        self, texts: List[str], all_entities: List[List[Dict[str, Any]]], **kwargs
-    ) -> List[Dict[str, Any]]:
+        self, texts: list[str], all_entities: list[list[dict[str, Any]]], **kwargs
+    ) -> list[dict[str, Any]]:
         """
         Redact multiple texts while maintaining ID consistency across all texts.
 
@@ -242,7 +242,7 @@ class EntityRedactor:
         if len(texts) != len(all_entities):
             raise ValueError("Number of texts must match number of entity lists")
 
-        logger.info(f"Starting batch redaction of {len(texts)} texts")
+        logger.info("Starting batch redaction of %d texts", len(texts))
 
         # Build global entity ID map for consistency across all texts
         all_entity_keys = set()
@@ -269,7 +269,7 @@ class EntityRedactor:
                 self.entity_id_map = old_map
                 self.used_ids_per_label = defaultdict(set, old_used_ids)
 
-            logger.debug(f"Completed redaction for text {i + 1}/{len(texts)}")
+            logger.debug("Completed redaction for text %d/%d", i + 1, len(texts))
 
         logger.info("Batch redaction complete")
         return results
@@ -281,7 +281,7 @@ class EntityRedactor:
         self.redaction_history.clear()
         logger.info("Redaction history cleared")
 
-    def get_redaction_stats(self) -> Dict[str, Any]:
+    def get_redaction_stats(self) -> dict[str, Any]:
         """Get statistics about redaction operations."""
         total_unique_entities = len(self.entity_id_map)
         labels_processed = len(self.used_ids_per_label)

@@ -11,7 +11,9 @@ Version: 1.0.0
 import copy
 import logging
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any
+
+from ..constants import MAX_ENTITY_LENGTH
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +29,7 @@ class EntityValidator:
         self,
         min_confidence: float = 0.3,
         strict_validation: bool = True,
-        max_entity_length: int = 200,
+        max_entity_length: int = MAX_ENTITY_LENGTH,
     ):
         """
         Initialize the entity validator.
@@ -50,13 +52,14 @@ class EntityValidator:
         }
 
         logger.info(
-            f"EntityValidator initialized: min_confidence={min_confidence},"
-            f" strict={strict_validation}"
+            "EntityValidator initialized: min_confidence=%s, strict=%s",
+            min_confidence,
+            strict_validation,
         )
 
     def validate_entities(
-        self, entities: List[Dict[str, Any]], text: str, min_confidence: Optional[float] = None
-    ) -> List[Dict[str, Any]]:
+        self, entities: list[dict[str, Any]], text: str, min_confidence: float | None = None
+    ) -> list[dict[str, Any]]:
         """
         Comprehensive entity validation pipeline.
 
@@ -73,7 +76,9 @@ class EntityValidator:
 
         confidence_threshold = min_confidence if min_confidence is not None else self.min_confidence
 
-        logger.info(f"Validating {len(entities)} entities (min_confidence={confidence_threshold})")
+        logger.info(
+            "Validating %d entities (min_confidence=%s)", len(entities), confidence_threshold
+        )
 
         # Reset stats
         self.validation_stats["total_entities"] = len(entities)
@@ -106,27 +111,27 @@ class EntityValidator:
                 validated.append(cleaned_entity)
 
             except Exception as e:
-                logger.error(f"Error validating entity {entity}: {str(e)}")
+                logger.error("Error validating entity %s: %s", entity, str(e))
                 self.validation_stats["validation_errors"] += 1
                 continue
 
         self.validation_stats["valid_entities"] = len(validated)
 
-        logger.info(f"Validation complete: {len(validated)}/{len(entities)} entities passed")
+        logger.info("Validation complete: %d/%d entities passed", len(validated), len(entities))
         if self.validation_stats["confidence_filtered"] > 0:
             logger.info(
-                f" - Filtered by confidence: {self.validation_stats['confidence_filtered']}"
+                " - Filtered by confidence: %d", self.validation_stats["confidence_filtered"]
             )
         if self.validation_stats["position_invalid"] > 0:
-            logger.info(f" - Invalid positions: {self.validation_stats['position_invalid']}")
+            logger.info(" - Invalid positions: %d", self.validation_stats["position_invalid"])
         if self.validation_stats["text_mismatch"] > 0:
-            logger.info(f" - Text mismatches: {self.validation_stats['text_mismatch']}")
+            logger.info(" - Text mismatches: %d", self.validation_stats["text_mismatch"])
         if self.validation_stats["validation_errors"] > 0:
-            logger.warning(f" - Validation errors: {self.validation_stats['validation_errors']}")
+            logger.warning(" - Validation errors: %d", self.validation_stats["validation_errors"])
 
         return validated
 
-    def _validate_confidence(self, entity: Dict[str, Any], min_confidence: float) -> bool:
+    def _validate_confidence(self, entity: dict[str, Any], min_confidence: float) -> bool:
         """Validate entity confidence score."""
         try:
             score = entity.get("score", 0.0)
@@ -135,7 +140,7 @@ class EntityValidator:
             logger.debug(f"Confidence validation error: {str(e)}")
             return False
 
-    def _validate_position(self, entity: Dict[str, Any], text: str) -> bool:
+    def _validate_position(self, entity: dict[str, Any], text: str) -> bool:
         """Validate entity position boundaries."""
         try:
             start = entity.get("start", -1)
@@ -166,7 +171,7 @@ class EntityValidator:
             logger.debug(f"Position validation error: {str(e)}")
             return False
 
-    def _validate_text_consistency(self, entity: Dict[str, Any], text: str) -> bool:
+    def _validate_text_consistency(self, entity: dict[str, Any], text: str) -> bool:
         """Validate that entity text matches the text at specified positions."""
         try:
             start = entity.get("start")
@@ -200,7 +205,7 @@ class EntityValidator:
             logger.debug(f"Text consistency validation error: {str(e)}")
             return False
 
-    def _clean_entity(self, entity: Dict[str, Any], text: str) -> Dict[str, Any]:
+    def _clean_entity(self, entity: dict[str, Any], text: str) -> dict[str, Any]:
         """Clean and normalize entity data."""
         try:
             cleaned = copy.deepcopy(entity)
@@ -220,8 +225,8 @@ class EntityValidator:
             return copy.deepcopy(entity)
 
     def resolve_overlaps(
-        self, entities: List[Dict[str, Any]], strategy: str = "highest_confidence"
-    ) -> List[Dict[str, Any]]:
+        self, entities: list[dict[str, Any]], strategy: str = "highest_confidence"
+    ) -> list[dict[str, Any]]:
         """
         Resolve overlapping entities using specified strategy.
 
@@ -241,7 +246,7 @@ class EntityValidator:
                 return [copy.deepcopy(e) for e in entities]
 
             logger.info(
-                f"Resolving {len(overlaps)} overlapping entity pairs using '{strategy}' strategy"
+                "Resolving %d overlapping entity pairs using '%s' strategy", len(overlaps), strategy
             )
 
             # Mark entities to remove
@@ -264,20 +269,20 @@ class EntityValidator:
                 elif strategy == "first":
                     to_remove.add(idx2)  # Keep the first one
                 else:
-                    logger.warning(f"Unknown overlap resolution strategy: {strategy}")
+                    logger.warning("Unknown overlap resolution strategy: %s", strategy)
                     to_remove.add(idx2)  # Default to first
 
             # Return entities not marked for removal
             resolved = [entity for i, entity in enumerate(entities) if i not in to_remove]
 
-            logger.info(f"Overlap resolution: {len(entities)} -> {len(resolved)} entities")
+            logger.info("Overlap resolution: %d -> %d entities", len(entities), len(resolved))
             return resolved
 
         except Exception as e:
-            logger.error(f"Error in overlap resolution: {str(e)}")
+            logger.error("Error in overlap resolution: %s", str(e))
             return entities
 
-    def _detect_overlaps(self, entities: List[Dict[str, Any]]) -> List[tuple]:
+    def _detect_overlaps(self, entities: list[dict[str, Any]]) -> list[tuple]:
         """Detect overlapping entities."""
         overlaps = []
 
@@ -291,7 +296,7 @@ class EntityValidator:
 
         return overlaps
 
-    def _entities_overlap(self, entity1: Dict[str, Any], entity2: Dict[str, Any]) -> bool:
+    def _entities_overlap(self, entity1: dict[str, Any], entity2: dict[str, Any]) -> bool:
         """Check if two entities have overlapping positions."""
         try:
             start1, end1 = entity1.get("start", 0), entity1.get("end", 0)
@@ -301,7 +306,7 @@ class EntityValidator:
             logger.debug(f"Error checking entity overlap: {str(e)}")
             return False
 
-    def get_validation_stats(self) -> Dict[str, Any]:
+    def get_validation_stats(self) -> dict[str, Any]:
         """Get validation statistics."""
         try:
             total = self.validation_stats["total_entities"]
@@ -318,5 +323,5 @@ class EntityValidator:
             return stats
 
         except Exception as e:
-            logger.error(f"Error computing validation stats: {str(e)}")
+            logger.error("Error computing validation stats: %s", str(e))
             return self.validation_stats

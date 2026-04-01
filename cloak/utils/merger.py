@@ -11,7 +11,7 @@ Version: 1.0.0
 import copy
 import logging
 import threading
-from typing import Any, Dict, List
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ class EntityMerger:
             "merges_by_label": {},
         }
 
-    def merge(self, entities: List[Dict[str, Any]], text: str) -> List[Dict[str, Any]]:
+    def merge(self, entities: list[dict[str, Any]], text: str) -> list[dict[str, Any]]:
         """
         Merge adjacent entities with the same label.
 
@@ -83,7 +83,7 @@ class EntityMerger:
                 )
                 current["count"] += 1
 
-                logger.debug(f"Merged entities: '{current['text']}' (count: {current['count']})")
+                logger.debug("Merged entities: '%s' (count: %d)", current["text"], current["count"])
 
             else:
                 # Cannot merge, add current to results and start new current
@@ -119,11 +119,11 @@ class EntityMerger:
                     self.merge_stats["merges_by_label"].get(label, 0) + diff
                 )
 
-        logger.info(f"Entity merging complete: {original_count} -> {len(merged)} entities")
+        logger.info("Entity merging complete: %d -> %d entities", original_count, len(merged))
 
         return merged
 
-    def can_merge(self, entity1: Dict[str, Any], entity2: Dict[str, Any]) -> bool:
+    def can_merge(self, entity1: dict[str, Any], entity2: dict[str, Any]) -> bool:
         """
         Check if two entities can be merged.
 
@@ -139,8 +139,8 @@ class EntityMerger:
         )
 
     def get_merge_statistics(
-        self, original_entities: List[Dict[str, Any]], merged_entities: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+        self, original_entities: list[dict[str, Any]], merged_entities: list[dict[str, Any]]
+    ) -> dict[str, Any]:
         """
         Get statistics about the merging process.
 

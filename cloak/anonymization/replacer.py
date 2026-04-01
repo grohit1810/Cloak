@@ -15,7 +15,7 @@ import logging
 import random
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 try:
     from faker import Faker
@@ -97,9 +97,9 @@ class EntityReplacer:
         # Initialize replacement strategies
         self._init_strategies()
 
-        logger.info(f"EntityReplacer initialized with locale: {locale}")
-        logger.info(f"Faker available: {FAKER_AVAILABLE}")
-        logger.info(f"Consistency enabled: {ensure_consistency}")
+        logger.info("EntityReplacer initialized with locale: %s", locale)
+        logger.info("Faker available: %s", FAKER_AVAILABLE)
+        logger.info("Consistency enabled: %s", ensure_consistency)
 
     def _init_strategies(self):
         """Initialize replacement strategies."""
@@ -128,10 +128,10 @@ class EntityReplacer:
     def replace(
         self,
         text: str,
-        entities: List[Dict[str, Any]],
-        ensure_consistency: Optional[bool] = None,
-        custom_strategies: Optional[Dict[str, str]] = None,
-    ) -> Dict[str, Any]:
+        entities: list[dict[str, Any]],
+        ensure_consistency: bool | None = None,
+        custom_strategies: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
         """
         Replace entities with synthetic alternatives.
 
@@ -156,8 +156,8 @@ class EntityReplacer:
         )
         strategies = custom_strategies or {}
 
-        logger.info(f"Starting replacement of {len(entities)} entities")
-        logger.info(f"Consistency enabled: {consistency}")
+        logger.info("Starting replacement of %d entities", len(entities))
+        logger.info("Consistency enabled: %s", consistency)
 
         # Sort entities by start position (reverse order for safe replacement)
         sorted_entities = sorted(entities, key=lambda x: x["start"], reverse=True)
@@ -200,13 +200,13 @@ class EntityReplacer:
                     replacement_map[original_text] = replacement
 
                     logger.debug(
-                        f"Replaced '{original_text}' -> '{replacement}' using {strategy_used}"
+                        "Replaced '%s' -> '%s' using %s", original_text, replacement, strategy_used
                     )
                 else:
-                    logger.debug(f"No replacement for '{original_text}' (label: {label})")
+                    logger.debug("No replacement for '%s' (label: %s)", original_text, label)
 
             except Exception as e:
-                logger.error(f"Error replacing entity {entity}: {str(e)}")
+                logger.error("Error replacing entity %s: %s", entity, str(e))
                 continue
 
         # Sort replacement details by original position
@@ -230,16 +230,16 @@ class EntityReplacer:
             "replacement_map": replacement_map,
         }
 
-        logger.info(f"Replacement complete: {len(replacement_details)} replacements applied")
+        logger.info("Replacement complete: %d replacements applied", len(replacement_details))
         return result
 
     def replace_with_user_data(
         self,
         text: str,
-        entities: List[Dict[str, Any]],
-        user_replacements: Dict[str, Union[str, List[str]]],
-        ensure_consistency: Optional[bool] = None,
-    ) -> Dict[str, Any]:
+        entities: list[dict[str, Any]],
+        user_replacements: dict[str, str | list[str]],
+        ensure_consistency: bool | None = None,
+    ) -> dict[str, Any]:
         """
         Replace entities with user-provided data.
 
@@ -263,8 +263,8 @@ class EntityReplacer:
             ensure_consistency if ensure_consistency is not None else self.ensure_consistency
         )
 
-        logger.info(f"Starting user data replacement of {len(entities)} entities")
-        logger.info(f"User replacements for labels: {list(user_replacements.keys())}")
+        logger.info("Starting user data replacement of %d entities", len(entities))
+        logger.info("User replacements for labels: %s", list(user_replacements.keys()))
 
         # Sort entities by start position (reverse order)
         sorted_entities = sorted(entities, key=lambda x: x["start"], reverse=True)
@@ -318,10 +318,10 @@ class EntityReplacer:
                         replacement_details.append(detail)
                         replacement_map[original_text] = replacement
 
-                        logger.debug(f"User replaced '{original_text}' -> '{replacement}'")
+                        logger.debug("User replaced '%s' -> '%s'", original_text, replacement)
 
             except Exception as e:
-                logger.error(f"Error in user replacement for entity {entity}: {str(e)}")
+                logger.error("Error in user replacement for entity %s: %s", entity, str(e))
                 continue
 
         # Sort by original position
@@ -341,12 +341,12 @@ class EntityReplacer:
         }
 
         logger.info(
-            f"User data replacement complete: {len(replacement_details)} replacements applied"
+            "User data replacement complete: %d replacements applied", len(replacement_details)
         )
         return result
 
     def _get_replacement(
-        self, entity: Dict[str, Any], consistency: bool, custom_strategy: Optional[str] = None
+        self, entity: dict[str, Any], consistency: bool, custom_strategy: str | None = None
     ) -> tuple[str, str]:
         """Get replacement for an entity using appropriate strategy."""
         label = entity["label"].lower()
@@ -377,7 +377,7 @@ class EntityReplacer:
                             self.replacement_cache[cache_key] = (replacement, strategy_name)
                         return replacement, strategy_name
                 except Exception as e:
-                    logger.debug(f"Strategy {strategy_name} failed for {label}: {str(e)}")
+                    logger.debug("Strategy %s failed for %s: %s", strategy_name, label, str(e))
                     continue
 
         # Fallback to default strategy
@@ -387,10 +387,10 @@ class EntityReplacer:
                 self.replacement_cache[cache_key] = (replacement, "default")
             return replacement, "default"
         except Exception as e:
-            logger.error(f"Default strategy failed for {entity}: {str(e)}")
+            logger.error("Default strategy failed for %s: %s", entity, str(e))
             return original_text, "none"
 
-    def _select_user_replacement(self, user_data: Union[str, List[str]]) -> str:
+    def _select_user_replacement(self, user_data: str | list[str]) -> str:
         """Select a replacement from user data."""
         if isinstance(user_data, str):
             return user_data
@@ -404,7 +404,7 @@ class EntityReplacer:
         self.replacement_cache.clear()
         logger.info("Replacement cache cleared")
 
-    def get_replacement_stats(self) -> Dict[str, Any]:
+    def get_replacement_stats(self) -> dict[str, Any]:
         """Get statistics about replacement operations."""
         cache_size = len(self.replacement_cache)
 
