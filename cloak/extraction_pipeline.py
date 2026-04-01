@@ -15,7 +15,6 @@ Version: 1.0.0
 import logging
 import re
 import time
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from .constants import (
@@ -47,6 +46,7 @@ class CloakExtraction:
         self,
         model_path: Optional[str] = None,
         onnx_model_file: str = "model.onnx",
+        use_onnx: bool = True,
         use_caching: bool = True,
         cache_size: int = DEFAULT_CACHE_SIZE,
         min_confidence: float = DEFAULT_MIN_CONFIDENCE,
@@ -57,8 +57,9 @@ class CloakExtraction:
         Initialize the Cloak extraction pipeline.
 
         Args:
-            model_path: Path to the local GLINER ONNX model directory
+            model_path: Path to the local GLINER model directory or HuggingFace model ID
             onnx_model_file: Name of the ONNX model file
+            use_onnx: Whether to use ONNX backend (default: True). If False, uses PyTorch.
             use_caching: Whether to enable caching (default: True)
             cache_size: Size of the cache (default: 128)
             min_confidence: Minimum confidence threshold for entities (default: 0.3)
@@ -68,14 +69,9 @@ class CloakExtraction:
         """
         logger.info("Initializing Cloak extraction pipeline")
 
-        if model_path:
-            self.model_path = Path(model_path)
-            if not self.model_path.exists():
-                raise FileNotFoundError(f"Model path does not exist: {model_path}")
-        else:
-            self.model_path = None
-
+        self.model_path = model_path
         self.onnx_model_file = onnx_model_file
+        self.use_onnx = use_onnx
         self.use_caching = use_caching
         self.cache_size = cache_size
         self.min_confidence = min_confidence
@@ -98,47 +94,48 @@ class CloakExtraction:
     def _initialize_components(self):
         """Initialize all pipeline components."""
         try:
-            logger.info(f"Loading model from: {self.model_path}")
+            logger.info("Loading model from: %s", self.model_path)
 
-            # Initialize base extractor
-            self.base_extractor = EntityExtractor(str(self.model_path), self.onnx_model_file)
+            from .models.gliner_model import GLiNERModel
 
-            # Setup caching wrapper if enabled
+            gliner_model = GLiNERModel(
+                model_path=str(self.model_path),
+                use_onnx=self.use_onnx,
+                onnx_model_file=self.onnx_model_file,
+            )
+
+            self.base_extractor = EntityExtractor(gliner_model)
+
             if self.use_caching:
                 self.extractor = CachedEntityExtractor(self.base_extractor, self.cache_size)
-                logger.info(f"Caching enabled with size {self.cache_size}")
+                logger.info("Caching enabled with size %d", self.cache_size)
             else:
                 self.extractor = self.base_extractor
                 logger.info("Caching disabled")
 
-            # Initialize parallel processor
-            self.parallel_processor = ParallelEntityProcessor(
-                str(self.model_path), self.onnx_model_file
-            )
-
-            # Initialize utility components
+            self.parallel_processor = ParallelEntityProcessor(gliner_model)
             self.merger = EntityMerger()
             self.validator = EntityValidator(
-                min_confidence=self.min_confidence, strict_validation=self.strict_validation
+                min_confidence=self.min_confidence,
+                strict_validation=self.strict_validation,
             )
 
             logger.info(
-                f"Entity validation: min_confidence={self.min_confidence},"
-                f" strict={self.strict_validation}"
+                "Entity validation: min_confidence=%s, strict=%s",
+                self.min_confidence,
+                self.strict_validation,
             )
-            logger.info(f"Overlap resolution strategy: {self.overlap_strategy}")
+            logger.info("Overlap resolution strategy: %s", self.overlap_strategy)
 
         except Exception as e:
-            logger.error(f"Failed to initialize components: {str(e)}")
+            logger.error("Failed to initialize components: %s", e)
             raise
 
     def _ensure_initialized(self, model_path: Optional[str] = None):
         """Ensure components are initialized, using provided model_path if needed."""
         if self.base_extractor is None:
             if model_path:
-                self.model_path = Path(model_path)
-                if not self.model_path.exists():
-                    raise FileNotFoundError(f"Model path does not exist: {model_path}")
+                self.model_path = model_path
                 self._initialize_components()
             else:
                 raise ValueError(

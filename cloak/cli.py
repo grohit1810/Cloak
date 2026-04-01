@@ -70,6 +70,11 @@ Examples:
         default="model.onnx",
         help="Name of the ONNX model file (default: model.onnx)",
     )
+    parser.add_argument(
+        "--no-onnx",
+        action="store_true",
+        help="Use PyTorch model instead of ONNX (default: ONNX)",
+    )
 
     # Input configuration
     parser.add_argument("--text", help="Input text to analyze")
@@ -174,6 +179,7 @@ Examples:
         cloak_instance = CloakExtraction(
             model_path=args.model,
             onnx_model_file=args.onnx_file,
+            use_onnx=not args.no_onnx,
             use_caching=not args.no_cache,
             cache_size=args.cache_size,
             min_confidence=args.min_confidence,
