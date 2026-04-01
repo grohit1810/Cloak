@@ -132,15 +132,14 @@ class CloakExtraction:
             raise
 
     def _ensure_initialized(self, model_path: Optional[str] = None):
-        """Ensure components are initialized, using provided model_path if needed."""
-        if self.base_extractor is None:
-            if model_path:
-                self.model_path = model_path
-                self._initialize_components()
-            else:
-                raise ValueError(
-                    "Model path must be provided either during initialization or method call"
-                )
+        """Ensure components are initialized."""
+        if self.base_extractor is not None:
+            return  # Already fully initialized
+        if model_path:
+            self.model_path = model_path
+        if self.model_path is None:
+            raise ValueError("Model path must be provided either during init or method call")
+        self._initialize_components()
 
     def extract_entities(
         self,

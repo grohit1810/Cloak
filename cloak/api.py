@@ -19,33 +19,46 @@ from .constants import DEFAULT_LABELS
 from .extraction_pipeline import CloakExtraction
 
 # Global instances for caching across calls
-_global_cloak_instance = None
-_global_redactor_instance = None
-_global_replacer_instance = None
+_global_cloak_instance: CloakExtraction | None = None
+_global_cloak_model_path: str | None = None
+_global_redactor: EntityRedactor | None = None
+_global_replacer: EntityReplacer | None = None
 
 
-def _get_global_cloak_instance(**kwargs):
-    """Get or create global Cloak instance with caching."""
-    global _global_cloak_instance
-    if _global_cloak_instance is None:
-        _global_cloak_instance = CloakExtraction(**kwargs)
+def _reset_global_instances() -> None:
+    """Reset all global instances. Used for testing."""
+    global _global_cloak_instance, _global_cloak_model_path
+    global _global_redactor, _global_replacer
+    _global_cloak_instance = None
+    _global_cloak_model_path = None
+    _global_redactor = None
+    _global_replacer = None
+
+
+def _get_cloak_instance(model_path: str | None = None, **kwargs) -> CloakExtraction:
+    """Get or create global Cloak instance, recreating if model_path changes."""
+    global _global_cloak_instance, _global_cloak_model_path
+    if _global_cloak_instance is not None and model_path == _global_cloak_model_path:
+        return _global_cloak_instance
+    _global_cloak_instance = CloakExtraction(model_path=model_path, **kwargs)
+    _global_cloak_model_path = model_path
     return _global_cloak_instance
 
 
-def _get_global_redactor_instance():
+def _get_global_redactor_instance() -> EntityRedactor:
     """Get or create global redactor instance."""
-    global _global_redactor_instance
-    if _global_redactor_instance is None:
-        _global_redactor_instance = EntityRedactor()
-    return _global_redactor_instance
+    global _global_redactor
+    if _global_redactor is None:
+        _global_redactor = EntityRedactor()
+    return _global_redactor
 
 
-def _get_global_replacer_instance():
+def _get_global_replacer_instance() -> EntityReplacer:
     """Get or create global replacer instance."""
-    global _global_replacer_instance
-    if _global_replacer_instance is None:
-        _global_replacer_instance = EntityReplacer()
-    return _global_replacer_instance
+    global _global_replacer
+    if _global_replacer is None:
+        _global_replacer = EntityReplacer()
+    return _global_replacer
 
 
 def extract(
@@ -67,10 +80,7 @@ def extract(
         >>> result = cloak.extract("John works at Google", labels=['person', 'company'])
         >>> print(result['entities'])
     """
-    if model_path:
-        kwargs["model_path"] = model_path
-
-    cloak_instance = _get_global_cloak_instance(**kwargs)
+    cloak_instance = _get_cloak_instance(model_path=model_path, **kwargs)
     return cloak_instance.extract_entities(text, labels or DEFAULT_LABELS)
 
 
@@ -106,10 +116,7 @@ def redact(
         # "#1_PERSON_REDACTED works at #1_COMPANY_REDACTED."
     """
     # First extract entities
-    if model_path:
-        kwargs["model_path"] = model_path
-
-    cloak_instance = _get_global_cloak_instance(**kwargs)
+    cloak_instance = _get_cloak_instance(model_path=model_path, **kwargs)
     extraction_result = cloak_instance.extract_entities(text, labels or DEFAULT_LABELS)
 
     # Then redact them
@@ -161,10 +168,7 @@ def replace(
         # "Alice Johnson lives in Berlin"
     """
     # First extract entities
-    if model_path:
-        kwargs["model_path"] = model_path
-
-    cloak_instance = _get_global_cloak_instance(**kwargs)
+    cloak_instance = _get_cloak_instance(model_path=model_path, **kwargs)
     extraction_result = cloak_instance.extract_entities(text, labels or DEFAULT_LABELS)
 
     # Then replace them
@@ -217,10 +221,7 @@ def replace_with_data(
         raise ValueError("user_replacements dictionary must be provided")
 
     # First extract entities
-    if model_path:
-        kwargs["model_path"] = model_path
-
-    cloak_instance = _get_global_cloak_instance(**kwargs)
+    cloak_instance = _get_cloak_instance(model_path=model_path, **kwargs)
     extraction_result = cloak_instance.extract_entities(text, labels or DEFAULT_LABELS)
 
     # Then replace with user data
