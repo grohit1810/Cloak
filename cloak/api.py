@@ -11,59 +11,76 @@ Author: G Rohit
 Version: 1.0.0
 """
 
-from typing import Any, Dict, List, Optional, Union
+import threading
+from typing import Any
 
 from .anonymization.redactor import EntityRedactor
 from .anonymization.replacer import EntityReplacer
 from .constants import DEFAULT_LABELS
 from .extraction_pipeline import CloakExtraction
 
-# Global instances for caching across calls
+_lock = threading.Lock()
 _global_cloak_instance: CloakExtraction | None = None
-_global_cloak_model_path: str | None = None
+_global_cloak_config: tuple | None = None
 _global_redactor: EntityRedactor | None = None
 _global_replacer: EntityReplacer | None = None
 
 
 def _reset_global_instances() -> None:
     """Reset all global instances. Used for testing."""
-    global _global_cloak_instance, _global_cloak_model_path
+    global _global_cloak_instance, _global_cloak_config
     global _global_redactor, _global_replacer
-    _global_cloak_instance = None
-    _global_cloak_model_path = None
-    _global_redactor = None
-    _global_replacer = None
+    with _lock:
+        _global_cloak_instance = None
+        _global_cloak_config = None
+        _global_redactor = None
+        _global_replacer = None
 
 
-def _get_cloak_instance(model_path: str | None = None, **kwargs) -> CloakExtraction:
-    """Get or create global Cloak instance, recreating if model_path changes."""
-    global _global_cloak_instance, _global_cloak_model_path
-    if _global_cloak_instance is not None and model_path == _global_cloak_model_path:
+def _make_config_key(model_path: str | None, **kwargs: Any) -> tuple:
+    """Create a hashable config key from constructor args."""
+    return (model_path, tuple(sorted(kwargs.items())))
+
+
+def _get_cloak_instance(model_path: str | None = None, **kwargs: Any) -> CloakExtraction:
+    """Get or create CloakExtraction, recreating if config changes. Thread-safe."""
+    global _global_cloak_instance, _global_cloak_config
+    config_key = _make_config_key(model_path, **kwargs)
+    # Fast path — no lock needed if config matches
+    if _global_cloak_instance is not None and config_key == _global_cloak_config:
         return _global_cloak_instance
-    _global_cloak_instance = CloakExtraction(model_path=model_path, **kwargs)
-    _global_cloak_model_path = model_path
-    return _global_cloak_instance
+    with _lock:
+        # Re-check inside lock (double-checked locking)
+        if _global_cloak_instance is not None and config_key == _global_cloak_config:
+            return _global_cloak_instance
+        _global_cloak_instance = CloakExtraction(model_path=model_path, **kwargs)
+        _global_cloak_config = config_key
+        return _global_cloak_instance
 
 
-def _get_global_redactor_instance() -> EntityRedactor:
-    """Get or create global redactor instance."""
+def _get_redactor() -> EntityRedactor:
+    """Get or create global EntityRedactor. Thread-safe."""
     global _global_redactor
     if _global_redactor is None:
-        _global_redactor = EntityRedactor()
+        with _lock:
+            if _global_redactor is None:
+                _global_redactor = EntityRedactor()
     return _global_redactor
 
 
-def _get_global_replacer_instance() -> EntityReplacer:
-    """Get or create global replacer instance."""
+def _get_replacer() -> EntityReplacer:
+    """Get or create global EntityReplacer. Thread-safe."""
     global _global_replacer
     if _global_replacer is None:
-        _global_replacer = EntityReplacer()
+        with _lock:
+            if _global_replacer is None:
+                _global_replacer = EntityReplacer()
     return _global_replacer
 
 
 def extract(
-    text: str, labels: Optional[List[str]] = None, model_path: Optional[str] = None, **kwargs
-) -> Dict[str, Any]:
+    text: str, labels: list[str] | None = None, model_path: str | None = None, **kwargs: Any
+) -> dict[str, Any]:
     """
     Extract entities from text with advanced validation and processing.
 
@@ -86,12 +103,12 @@ def extract(
 
 def redact(
     text: str,
-    labels: Optional[List[str]] = None,
-    model_path: Optional[str] = None,
+    labels: list[str] | None = None,
+    model_path: str | None = None,
     numbered: bool = True,
     placeholder_format: str = "#{id}_{label}_REDACTED",
-    **kwargs,
-) -> Dict[str, Any]:
+    **kwargs: Any,
+) -> dict[str, Any]:
     """
     Redact sensitive entities with numbered placeholders for consistency.
 
@@ -120,7 +137,7 @@ def redact(
     extraction_result = cloak_instance.extract_entities(text, labels or DEFAULT_LABELS)
 
     # Then redact them
-    redactor = _get_global_redactor_instance()
+    redactor = _get_redactor()
     redaction_result = redactor.redact(
         text=text,
         entities=extraction_result["entities"],
@@ -140,11 +157,11 @@ def redact(
 
 def replace(
     text: str,
-    labels: Optional[List[str]] = None,
-    model_path: Optional[str] = None,
+    labels: list[str] | None = None,
+    model_path: str | None = None,
     ensure_consistency: bool = True,
-    **kwargs,
-) -> Dict[str, Any]:
+    **kwargs: Any,
+) -> dict[str, Any]:
     """
     Replace sensitive entities with realistic synthetic alternatives.
 
@@ -172,7 +189,7 @@ def replace(
     extraction_result = cloak_instance.extract_entities(text, labels or DEFAULT_LABELS)
 
     # Then replace them
-    replacer = _get_global_replacer_instance()
+    replacer = _get_replacer()
     replacement_result = replacer.replace(
         text=text, entities=extraction_result["entities"], ensure_consistency=ensure_consistency
     )
@@ -189,12 +206,12 @@ def replace(
 
 def replace_with_data(
     text: str,
-    labels: Optional[List[str]] = None,
-    user_replacements: Optional[Dict[str, Union[str, List[str]]]] = None,
-    model_path: Optional[str] = None,
+    labels: list[str] | None = None,
+    user_replacements: dict[str, str | list[str]] | None = None,
+    model_path: str | None = None,
     ensure_consistency: bool = True,
-    **kwargs,
-) -> Dict[str, Any]:
+    **kwargs: Any,
+) -> dict[str, Any]:
     """
     Replace entities with user-provided replacement data.
 
@@ -225,7 +242,7 @@ def replace_with_data(
     extraction_result = cloak_instance.extract_entities(text, labels or DEFAULT_LABELS)
 
     # Then replace with user data
-    replacer = _get_global_replacer_instance()
+    replacer = _get_replacer()
     replacement_result = replacer.replace_with_user_data(
         text=text,
         entities=extraction_result["entities"],

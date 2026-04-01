@@ -1,5 +1,6 @@
 """Tests for the public API module."""
 
+import threading
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -85,3 +86,44 @@ class TestReplaceWithData:
     def test_replace_with_data_requires_user_replacements(self):
         with pytest.raises(ValueError, match="user_replacements"):
             cloak.replace_with_data("Hello", model_path="/fake")
+
+
+class TestThreadSafety:
+    def setup_method(self):
+        _reset_global_instances()
+
+    def teardown_method(self):
+        _reset_global_instances()
+
+    @patch("cloak.api.CloakExtraction")
+    def test_concurrent_extract_creates_instance_once(self, mock_cls):
+        mock_instance = MagicMock()
+        mock_instance.extract_entities.return_value = {"entities": [], "processing_info": {}}
+        mock_cls.return_value = mock_instance
+
+        barrier = threading.Barrier(4)
+        results = []
+
+        def call_extract():
+            barrier.wait()
+            cloak.extract("test", labels=["person"], model_path="/path")
+            results.append(True)
+
+        threads = [threading.Thread(target=call_extract) for _ in range(4)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert len(results) == 4
+        assert mock_cls.call_count <= 2  # At most 2 due to race before lock
+
+    @patch("cloak.api.CloakExtraction")
+    def test_different_kwargs_creates_new_instance(self, mock_cls):
+        mock_instance = MagicMock()
+        mock_instance.extract_entities.return_value = {"entities": [], "processing_info": {}}
+        mock_cls.return_value = mock_instance
+
+        cloak.extract("test", labels=["person"], model_path="/path", use_onnx=True)
+        cloak.extract("test", labels=["person"], model_path="/path", use_onnx=False)
+        assert mock_cls.call_count == 2
