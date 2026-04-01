@@ -205,9 +205,11 @@ class EntityRedactor:
             entity_key = (label, text)
 
             if entity_key not in entity_to_id:
-                # Generate new unique ID for this entity
-                unique_id = self._generate_unique_id(label.upper())
-                entity_to_id[entity_key] = unique_id
+                # Check for pre-assigned ID (e.g., from batch_redact)
+                if entity_key in self.entity_id_map:
+                    entity_to_id[entity_key] = self.entity_id_map[entity_key]
+                else:
+                    entity_to_id[entity_key] = self._generate_unique_id(label.upper())
 
         return entity_to_id
 
@@ -258,12 +260,14 @@ class EntityRedactor:
         results = []
         for i, (text, entities) in enumerate(zip(texts, all_entities)):
             old_map = self.entity_id_map.copy()
+            old_used_ids = {k: v.copy() for k, v in self.used_ids_per_label.items()}
             try:
                 self.entity_id_map = global_entity_map
                 result = self.redact(text, entities, **kwargs)
                 results.append(result)
             finally:
                 self.entity_id_map = old_map
+                self.used_ids_per_label = defaultdict(set, old_used_ids)
 
             logger.debug(f"Completed redaction for text {i + 1}/{len(texts)}")
 
