@@ -1,6 +1,7 @@
 """GLiNER model wrapper supporting both ONNX and PyTorch backends."""
 
 import logging
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -38,6 +39,7 @@ class GLiNERModel:
             if not path.exists():
                 raise FileNotFoundError(f"Model path does not exist: {model_path}")
 
+        self._lock = threading.Lock()
         self.model = self._load_model(
             model_path, use_onnx, onnx_model_file, device, local_files_only
         )
@@ -69,7 +71,8 @@ class GLiNERModel:
         """Run NER on a single text. Returns list of entity dicts."""
         if not text or not text.strip():
             return []
-        return self.model.predict_entities(text, labels, threshold=threshold, flat_ner=flat_ner)
+        with self._lock:
+            return self.model.predict_entities(text, labels, threshold=threshold, flat_ner=flat_ner)
 
     def batch_predict_entities(
         self,
@@ -81,9 +84,10 @@ class GLiNERModel:
         """Run NER on a batch of texts."""
         if not texts:
             return []
-        return self.model.batch_predict_entities(
-            texts, labels, threshold=threshold, flat_ner=flat_ner
-        )
+        with self._lock:
+            return self.model.batch_predict_entities(
+                texts, labels, threshold=threshold, flat_ner=flat_ner
+            )
 
     def get_model_info(self) -> dict[str, Any]:
         return {

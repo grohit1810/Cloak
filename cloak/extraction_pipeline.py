@@ -213,12 +213,20 @@ class CloakExtraction:
                     max_workers=max_workers,
                     use_parallel=True,
                 )
-                passes_completed = 1  # Parallel processing doesn't use multi-pass
             else:
-                entities = self.extractor.predict(
-                    text=text, labels=labels, use_cache=use_cache and self.use_caching
-                )
-                passes_completed = max_passes
+                if self.use_caching:
+                    entities = self.extractor.predict(
+                        text=text,
+                        labels=labels,
+                        use_cache=use_cache,
+                    )
+                else:
+                    entities = self.base_extractor.predict(
+                        text=text,
+                        labels=labels,
+                        max_passes=max_passes,
+                    )
+            passes_completed = max_passes
 
             logger.info(f"- Raw entities found: {len(entities)}")
 

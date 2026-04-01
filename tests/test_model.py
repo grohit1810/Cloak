@@ -1,5 +1,6 @@
 """Tests for GLiNER model wrapper."""
 
+import threading
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -52,6 +53,7 @@ class TestGLiNERModel:
         model.model = mock_model
         model.model_path = "test"
         model.use_onnx = True
+        model._lock = threading.Lock()
 
         result = model.predict_entities("John works at Google", ["person"], threshold=0.5)
         assert len(result) == 1
@@ -78,6 +80,7 @@ class TestGLiNERModel:
         ]
         model = GLiNERModel.__new__(GLiNERModel)
         model.model = mock_model
+        model._lock = threading.Lock()
 
         result = model.batch_predict_entities(
             ["John works here", "Paris is beautiful"], ["person", "location"]

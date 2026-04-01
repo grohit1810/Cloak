@@ -7,6 +7,7 @@ import concurrent.futures
 import logging
 from typing import Any
 
+from ..models.gliner_model import GLiNERModel
 from .chunker import chunk_text
 from .extractor import EntityExtractor
 
@@ -135,19 +136,15 @@ def extract_entities_in_parallel(
 class ParallelEntityProcessor:
     """High-level wrapper for parallel entity processing."""
 
-    def __init__(self, model: object):
+    def __init__(self, model: GLiNERModel):
         """Accept a GLiNERModel instance.
 
         Args:
             model: A GLiNERModel instance used to create the internal EntityExtractor.
         """
-        try:
-            self.model_path = model.model_path  # type: ignore[attr-defined]
-            self.extractor = EntityExtractor(model)  # type: ignore[arg-type]
-            logger.info("ParallelEntityProcessor initialized")
-        except Exception as e:
-            logger.error("Failed to initialize ParallelEntityProcessor: %s", e)
-            raise
+        self.model_path = model.model_path
+        self.extractor = EntityExtractor(model)
+        logger.info("ParallelEntityProcessor initialized")
 
     def process_text(
         self,
@@ -174,14 +171,14 @@ class ParallelEntityProcessor:
             return []
 
         try:
+            word_count = len(text.split())
             if use_parallel is None:
-                word_count = len(text.split())
                 use_parallel = word_count > chunk_size
 
             logger.info(
                 "Processing text (%d chars, ~%d words) - Parallel: %s",
                 len(text),
-                len(text.split()),
+                word_count,
                 use_parallel,
             )
 
