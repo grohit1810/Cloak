@@ -35,7 +35,7 @@ class CountryReplacementStrategy:
                     data = json.load(f)
                     return data.get("countries", self._get_default_countries())
         except Exception as e:
-            logger.debug(f"Could not load countries data file: {e}")
+            logger.debug("Could not load countries data file: %s", e)
 
         return self._get_default_countries()
 
@@ -119,7 +119,7 @@ class CountryReplacementStrategy:
                 return self._country_to_nationality(country)
 
         except Exception as e:
-            logger.debug(f"Country strategy failed for {original_text}: {str(e)}")
+            logger.debug("Country strategy failed for %s: %s", original_text, e)
 
         return None
 

@@ -274,8 +274,7 @@ class EntityReplacer:
         replacement_map = {}
 
         # Build consistency cache for user data
-        if consistency:
-            consistency_cache = {}
+        consistency_cache: dict[tuple[str, str], str] = {}
 
         for entity in sorted_entities:
             try:

@@ -137,7 +137,7 @@ class EntityValidator:
             score = entity.get("score", 0.0)
             return isinstance(score, (int, float)) and score >= min_confidence
         except Exception as e:
-            logger.debug(f"Confidence validation error: {str(e)}")
+            logger.debug("Confidence validation error: %s", e)
             return False
 
     def _validate_position(self, entity: dict[str, Any], text: str) -> bool:
@@ -168,7 +168,7 @@ class EntityValidator:
             return True
 
         except Exception as e:
-            logger.debug(f"Position validation error: {str(e)}")
+            logger.debug("Position validation error: %s", e)
             return False
 
     def _validate_text_consistency(self, entity: dict[str, Any], text: str) -> bool:
@@ -202,7 +202,7 @@ class EntityValidator:
             return False
 
         except (IndexError, TypeError) as e:
-            logger.debug(f"Text consistency validation error: {str(e)}")
+            logger.debug("Text consistency validation error: %s", e)
             return False
 
     def _clean_entity(self, entity: dict[str, Any], text: str) -> dict[str, Any]:
@@ -221,7 +221,7 @@ class EntityValidator:
             return cleaned
 
         except Exception as e:
-            logger.error(f"Entity cleaning error: {str(e)}")
+            logger.error("Entity cleaning error: %s", e)
             return copy.deepcopy(entity)
 
     def resolve_overlaps(
@@ -292,7 +292,7 @@ class EntityValidator:
                     if self._entities_overlap(entity1, entity2):
                         overlaps.append((i, j))
         except Exception as e:
-            logger.error(f"Error detecting overlaps: {str(e)}")
+            logger.error("Error detecting overlaps: %s", e)
 
         return overlaps
 
@@ -303,7 +303,7 @@ class EntityValidator:
             start2, end2 = entity2.get("start", 0), entity2.get("end", 0)
             return not (end1 <= start2 or end2 <= start1)
         except Exception as e:
-            logger.debug(f"Error checking entity overlap: {str(e)}")
+            logger.debug("Error checking entity overlap: %s", e)
             return False
 
     def get_validation_stats(self) -> dict[str, Any]:

@@ -250,24 +250,27 @@ class EntityRedactor:
             for entity in entities:
                 all_entity_keys.add((entity["label"], entity["text"]))
 
-        # Pre-generate IDs for all unique entities
-        global_entity_map = {}
-        for label, text in all_entity_keys:
-            unique_id = self._generate_unique_id(label.upper())
-            global_entity_map[(label, text)] = unique_id
+        # Snapshot state before pre-generation so entire batch is side-effect-free
+        saved_map = self.entity_id_map.copy()
+        saved_used_ids = {k: v.copy() for k, v in self.used_ids_per_label.items()}
 
-        # Apply redaction to each text
-        results = []
-        for i, (text, entities) in enumerate(zip(texts, all_entities)):
-            old_map = self.entity_id_map.copy()
-            old_used_ids = {k: v.copy() for k, v in self.used_ids_per_label.items()}
-            try:
+        try:
+            # Pre-generate IDs for all unique entities
+            global_entity_map = {}
+            for label, text in all_entity_keys:
+                unique_id = self._generate_unique_id(label.upper())
+                global_entity_map[(label, text)] = unique_id
+
+            # Apply redaction to each text
+            results = []
+            for i, (text, entities) in enumerate(zip(texts, all_entities)):
                 self.entity_id_map = global_entity_map
                 result = self.redact(text, entities, **kwargs)
                 results.append(result)
-            finally:
-                self.entity_id_map = old_map
-                self.used_ids_per_label = defaultdict(set, old_used_ids)
+                logger.debug("Completed redaction for text %d/%d", i + 1, len(texts))
+        finally:
+            self.entity_id_map = saved_map
+            self.used_ids_per_label = defaultdict(set, saved_used_ids)
 
             logger.debug("Completed redaction for text %d/%d", i + 1, len(texts))
 

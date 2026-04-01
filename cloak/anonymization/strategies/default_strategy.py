@@ -57,7 +57,7 @@ class DefaultReplacementStrategy:
             return self._generate_generic_replacement(original_text, label)
 
         except Exception as e:
-            logger.debug(f"Default strategy failed for {label}: {str(e)}")
+            logger.debug("Default strategy failed for %s: %s", label, e)
             return f"[{label.upper()}_REDACTED]"
 
     def _generate_generic_replacement(self, original_text: str, label: str) -> str:

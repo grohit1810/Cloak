@@ -95,7 +95,7 @@ class FakerReplacementStrategy:
                         faker_method = getattr(self.faker, method)
                         replacement = faker_method()
                     else:
-                        logger.debug(f"Faker method '{method}' not available")
+                        logger.debug("Faker method '%s' not available", method)
                         return None
 
                 # Ensure we don't return the same value
@@ -114,5 +114,5 @@ class FakerReplacementStrategy:
                 return replacement
 
         except Exception as e:
-            logger.debug(f"Faker strategy failed for {label}: {str(e)}")
+            logger.debug("Faker strategy failed for %s: %s", label, e)
             return None

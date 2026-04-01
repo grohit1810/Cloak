@@ -82,7 +82,7 @@ class DateReplacementStrategy:
             return self._simple_date_replacement(original_text)
 
         except Exception as e:
-            logger.debug(f"Date strategy failed for '{original_text}': {str(e)}")
+            logger.debug("Date strategy failed for '%s': %s", original_text, e)
             return None
 
     def _replace_mdy_format(self, original: str) -> str:
