@@ -89,7 +89,7 @@ Examples:
     # Processing mode
     mode_group = parser.add_mutually_exclusive_group()
     mode_group.add_argument(
-        "--extract", action="store_true", default=True, help="Extract entities only (default)"
+        "--extract", action="store_true", help="Extract entities only (default mode)"
     )
     mode_group.add_argument(
         "--redact", action="store_true", help="Redact entities with numbered placeholders"

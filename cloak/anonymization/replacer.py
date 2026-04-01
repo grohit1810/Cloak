@@ -25,6 +25,7 @@ except ImportError:
     FAKER_AVAILABLE = False
     logging.warning("Faker not available. Install with: pip install faker")
 
+from .strategies.base import ReplacementStrategy
 from .strategies.country_strategy import CountryReplacementStrategy
 from .strategies.date_strategy import DateReplacementStrategy
 from .strategies.default_strategy import DefaultReplacementStrategy
@@ -85,7 +86,7 @@ class EntityReplacer:
 
     def _init_strategies(self):
         """Initialize replacement strategies."""
-        self.strategies = {
+        self.strategies: dict[str, ReplacementStrategy | None] = {
             "faker": FakerReplacementStrategy(self.faker) if self.faker else None,
             "country": CountryReplacementStrategy(),
             "date": DateReplacementStrategy(self.faker),

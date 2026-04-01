@@ -116,5 +116,3 @@ class FakerReplacementStrategy:
         except Exception as e:
             logger.debug(f"Faker strategy failed for {label}: {str(e)}")
             return None
-
-        return None

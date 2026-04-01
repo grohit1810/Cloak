@@ -37,22 +37,6 @@ class CacheManager:
 
         logger.info(f"CacheManager initialized with maxsize: {maxsize}")
 
-    @staticmethod
-    def create_cache_key(text: str, labels: List[str]) -> Tuple[str, Tuple[str, ...]]:
-        """
-        Create a cache key from text and labels.
-        Labels are converted to tuple for immutability (required for caching).
-
-        Args:
-            text: Input text
-            labels: List of entity labels
-
-        Returns:
-            Tuple of (text, labels_tuple) suitable for use as cache key
-        """
-        labels_tuple = tuple(sorted(labels)) if labels else tuple()
-        return (text, labels_tuple)
-
     def create_cached_extractor(self, extractor_func):
         """
         Create a cached version of an extractor function.

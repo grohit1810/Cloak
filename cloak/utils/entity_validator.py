@@ -8,6 +8,7 @@ Author: G Rohit (Enhanced from original)
 Version: 1.0.0
 """
 
+import copy
 import logging
 import re
 from typing import Any, Dict, List, Optional
@@ -22,16 +23,23 @@ class EntityValidator:
     Implements advanced validation features with comprehensive error handling.
     """
 
-    def __init__(self, min_confidence: float = 0.3, strict_validation: bool = True):
+    def __init__(
+        self,
+        min_confidence: float = 0.3,
+        strict_validation: bool = True,
+        max_entity_length: int = 200,
+    ):
         """
         Initialize the entity validator.
 
         Args:
             min_confidence: Minimum confidence threshold for entities (default: 0.3)
             strict_validation: Whether to apply strict position/text validation
+            max_entity_length: Maximum allowed entity length in characters (default: 200)
         """
         self.min_confidence = min_confidence
         self.strict_validation = strict_validation
+        self.max_entity_length = max_entity_length
         self.validation_stats = {
             "total_entities": 0,
             "confidence_filtered": 0,
@@ -149,7 +157,7 @@ class EntityValidator:
 
             # Check for reasonable entity length (not too long)
             entity_length = end - start
-            if entity_length > 200:  # Entities longer than 200 chars are suspicious
+            if entity_length > self.max_entity_length:
                 return False
 
             return True
@@ -195,15 +203,7 @@ class EntityValidator:
     def _clean_entity(self, entity: Dict[str, Any], text: str) -> Dict[str, Any]:
         """Clean and normalize entity data."""
         try:
-            cleaned = entity.copy()
-
-            # Ensure text matches actual position
-            if self.strict_validation:
-                start = cleaned.get("start")
-                end = cleaned.get("end")
-                if start is not None and end is not None:
-                    actual_text = text[start:end]
-                    cleaned["text"] = actual_text.strip()
+            cleaned = copy.deepcopy(entity)
 
             # Normalize label
             if "label" in cleaned:
@@ -212,10 +212,6 @@ class EntityValidator:
             # Ensure score is a float
             if "score" in cleaned:
                 cleaned["score"] = float(cleaned["score"])
-
-            # Add validation metadata
-            cleaned["validated"] = True
-            cleaned["validator_version"] = "1.0.0"
 
             return cleaned
 

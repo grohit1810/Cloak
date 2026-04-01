@@ -8,7 +8,9 @@ Author: G Rohit (Enhanced from original)
 Version: 1.0.0
 """
 
+import copy
 import logging
+import threading
 from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
@@ -23,17 +25,20 @@ class EntityMerger:
     merging them into a single entity when appropriate.
     """
 
-    def __init__(self, max_gap: int = 1, enable_logging: bool = True):
+    def __init__(self, max_gap: int = 1):
         """
         Initialize the entity merger.
 
         Args:
             max_gap: Maximum character gap to allow for merging (default: 1)
-            enable_logging: Whether to enable detailed logging (default: True)
         """
         self.max_gap = max_gap
-        self.enable_logging = enable_logging
-        self.merge_stats = {"total_processed": 0, "total_merged": 0, "merges_by_label": {}}
+        self._lock = threading.Lock()
+        self.merge_stats: dict[str, Any] = {
+            "total_processed": 0,
+            "total_merged": 0,
+            "merges_by_label": {},
+        }
 
     def merge(self, entities: List[Dict[str, Any]], text: str) -> List[Dict[str, Any]]:
         """
@@ -50,13 +55,12 @@ class EntityMerger:
             return []
 
         original_count = len(entities)
-        self.merge_stats["total_processed"] += original_count
 
         # Sort entities by start position to ensure proper merging
         entities = sorted(entities, key=lambda x: x["start"])
 
         merged = []
-        current = entities[0].copy()
+        current = copy.deepcopy(entities[0])
         current["count"] = 1
 
         for next_entity in entities[1:]:
@@ -79,16 +83,13 @@ class EntityMerger:
                 )
                 current["count"] += 1
 
-                if self.enable_logging:
-                    logger.debug(
-                        f"Merged entities: '{current['text']}' (count: {current['count']})"
-                    )
+                logger.debug(f"Merged entities: '{current['text']}' (count: {current['count']})")
 
             else:
                 # Cannot merge, add current to results and start new current
                 current.pop("count", None)  # Remove internal count field
                 merged.append(current)
-                current = next_entity.copy()
+                current = copy.deepcopy(next_entity)
                 current["count"] = 1
 
         # Add the last entity
@@ -97,16 +98,28 @@ class EntityMerger:
 
         # Update statistics
         merges_applied = original_count - len(merged)
-        self.merge_stats["total_merged"] += merges_applied
 
-        # Track merges by label
+        # Count by label in original and merged
+        original_by_label: dict[str, int] = {}
         for entity in entities:
             label = entity["label"]
-            if label not in self.merge_stats["merges_by_label"]:
-                self.merge_stats["merges_by_label"][label] = 0
+            original_by_label[label] = original_by_label.get(label, 0) + 1
 
-        if self.enable_logging:
-            logger.info(f"Entity merging complete: {original_count} -> {len(merged)} entities")
+        merged_by_label: dict[str, int] = {}
+        for entity in merged:
+            label = entity["label"]
+            merged_by_label[label] = merged_by_label.get(label, 0) + 1
+
+        with self._lock:
+            self.merge_stats["total_processed"] += original_count
+            self.merge_stats["total_merged"] += merges_applied
+            for label in original_by_label:
+                diff = original_by_label.get(label, 0) - merged_by_label.get(label, 0)
+                self.merge_stats["merges_by_label"][label] = (
+                    self.merge_stats["merges_by_label"].get(label, 0) + diff
+                )
+
+        logger.info(f"Entity merging complete: {original_count} -> {len(merged)} entities")
 
         return merged
 
@@ -168,5 +181,4 @@ class EntityMerger:
     def reset_statistics(self):
         """Reset merge statistics."""
         self.merge_stats = {"total_processed": 0, "total_merged": 0, "merges_by_label": {}}
-        if self.enable_logging:
-            logger.info("Merge statistics reset")
+        logger.info("Merge statistics reset")
