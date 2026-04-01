@@ -23,7 +23,7 @@ import json
 import logging
 import sys
 
-import cloak
+from cloak.constants import DEFAULT_LABELS
 from cloak.extraction_pipeline import CloakExtraction
 
 # Configure logging
@@ -82,7 +82,7 @@ Examples:
     parser.add_argument(
         "--labels",
         nargs="+",
-        default=["person", "date", "location", "organization"],
+        default=list(DEFAULT_LABELS),
         help="Entity labels to detect",
     )
 
@@ -105,19 +105,17 @@ Examples:
         help="Placeholder format for redaction (default: #{id}_{label}_REDACTED)",
     )
     parser.add_argument(
-        "--numbered",
+        "--no-numbered",
         action="store_true",
-        default=True,
-        help="Use numbered redaction (default: True)",
+        help="Disable numbered redaction",
     )
 
     # Replacement options
     parser.add_argument("--replacement-file", help="JSON file with custom replacement data")
     parser.add_argument(
-        "--ensure-consistency",
+        "--no-consistency",
         action="store_true",
-        default=True,
-        help="Ensure consistent replacements for identical entities",
+        help="Disable consistent replacements",
     )
 
     # Processing configuration
@@ -232,44 +230,84 @@ Examples:
         # Determine processing mode and execute
         if args.redact:
             logger.info("Running redaction mode")
-            result = cloak.redact(
+            extraction_result = cloak_instance.extract_entities(
                 text=text,
                 labels=args.labels,
-                model_path=args.model,
-                numbered=args.numbered,
-                placeholder_format=args.placeholder,
-            )
-
-        elif args.replace:
-            logger.info("Running replacement mode")
-            if user_replacements:
-                result = cloak.replace_with_data(
-                    text=text,
-                    labels=args.labels,
-                    user_replacements=user_replacements,
-                    model_path=args.model,
-                    ensure_consistency=args.ensure_consistency,
-                )
-            else:
-                result = cloak.replace(
-                    text=text,
-                    labels=args.labels,
-                    model_path=args.model,
-                    ensure_consistency=args.ensure_consistency,
-                )
-        else:
-            logger.info("Running extraction mode")
-            result = cloak.extract(
-                text=text,
-                labels=args.labels,
-                model_path=args.model,
                 max_passes=args.max_passes,
                 use_parallel=use_parallel,
                 chunk_size=args.chunk_size,
                 max_workers=args.workers,
                 merge_entities=not args.no_merge,
                 use_cache=not args.no_cache,
-                min_confidence=args.min_confidence,
+                enable_validation=not args.no_validation,
+                resolve_overlaps=True,
+            )
+            from cloak.anonymization.redactor import EntityRedactor
+
+            redactor = EntityRedactor()
+            redaction_result = redactor.redact(
+                text=text,
+                entities=extraction_result["entities"],
+                numbered=not args.no_numbered,
+                placeholder_format=args.placeholder,
+            )
+            result = {
+                "anonymized_text": redaction_result["anonymized_text"],
+                "entities": extraction_result["entities"],
+                "replacements": redaction_result["replacements"],
+                "processing_info": extraction_result["processing_info"],
+                "redaction_info": redaction_result["redaction_info"],
+            }
+
+        elif args.replace:
+            logger.info("Running replacement mode")
+            extraction_result = cloak_instance.extract_entities(
+                text=text,
+                labels=args.labels,
+                max_passes=args.max_passes,
+                use_parallel=use_parallel,
+                chunk_size=args.chunk_size,
+                max_workers=args.workers,
+                merge_entities=not args.no_merge,
+                use_cache=not args.no_cache,
+                enable_validation=not args.no_validation,
+                resolve_overlaps=True,
+            )
+            from cloak.anonymization.replacer import EntityReplacer
+
+            replacer = EntityReplacer()
+            if user_replacements:
+                replacement_result = replacer.replace_with_user_data(
+                    text=text,
+                    entities=extraction_result["entities"],
+                    user_replacements=user_replacements,
+                    ensure_consistency=not args.no_consistency,
+                )
+            else:
+                replacement_result = replacer.replace(
+                    text=text,
+                    entities=extraction_result["entities"],
+                    ensure_consistency=not args.no_consistency,
+                )
+            result = {
+                "anonymized_text": replacement_result["anonymized_text"],
+                "entities": extraction_result["entities"],
+                "replacements": replacement_result["replacements"],
+                "processing_info": extraction_result["processing_info"],
+                "replacement_info": replacement_result["replacement_info"],
+            }
+
+        else:
+            logger.info("Running extraction mode")
+            result = cloak_instance.extract_entities(
+                text=text,
+                labels=args.labels,
+                max_passes=args.max_passes,
+                use_parallel=use_parallel,
+                chunk_size=args.chunk_size,
+                max_workers=args.workers,
+                merge_entities=not args.no_merge,
+                use_cache=not args.no_cache,
                 enable_validation=not args.no_validation,
                 resolve_overlaps=True,
             )
