@@ -3,7 +3,7 @@ Cloak Extraction - Enhanced NER Extraction Pipeline
 
 Main orchestrator class that manages all NER extraction functionality with:
 - Advanced entity validation and overlap resolution
-- Sophisticated caching with detailed analytics  
+- Sophisticated caching with detailed analytics
 - Word-based parallel processing for large texts
 - Multi-pass extraction with intelligent thresholds
 - Enterprise-grade error handling and logging
@@ -12,21 +12,22 @@ Author: G Rohit
 Version: 1.0.0
 """
 
+import logging
 import re
 import time
-import logging
-from typing import List, Dict, Any, Optional
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
-from .utils.merger import EntityMerger
-from .utils.cache_manager import CachedEntityExtractor
-from .utils.entity_validator import EntityValidator
 from .extraction.extractor import EntityExtractor
 from .extraction.parallel_processor import ParallelEntityProcessor
+from .utils.cache_manager import CachedEntityExtractor
+from .utils.entity_validator import EntityValidator
+from .utils.merger import EntityMerger
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 class CloakExtraction:
     """
@@ -44,7 +45,7 @@ class CloakExtraction:
         cache_size: int = 128,
         min_confidence: float = 0.3,
         strict_validation: bool = True,
-        overlap_strategy: str = "highest_confidence"
+        overlap_strategy: str = "highest_confidence",
     ):
         """
         Initialize the Cloak extraction pipeline.
@@ -56,9 +57,10 @@ class CloakExtraction:
             cache_size: Size of the cache (default: 128)
             min_confidence: Minimum confidence threshold for entities (default: 0.3)
             strict_validation: Enable strict position and text validation (default: True)
-            overlap_strategy: Strategy for resolving overlaps ("highest_confidence", "longest", "first")
+            overlap_strategy: Strategy for resolving overlaps
+                ("highest_confidence", "longest", "first")
         """
-        logger.info(f"Initializing Cloak extraction pipeline")
+        logger.info("Initializing Cloak extraction pipeline")
 
         if model_path:
             self.model_path = Path(model_path)
@@ -103,16 +105,20 @@ class CloakExtraction:
                 logger.info("Caching disabled")
 
             # Initialize parallel processor
-            self.parallel_processor = ParallelEntityProcessor(str(self.model_path), self.onnx_model_file)
+            self.parallel_processor = ParallelEntityProcessor(
+                str(self.model_path), self.onnx_model_file
+            )
 
             # Initialize utility components
             self.merger = EntityMerger()
             self.validator = EntityValidator(
-                min_confidence=self.min_confidence,
-                strict_validation=self.strict_validation
+                min_confidence=self.min_confidence, strict_validation=self.strict_validation
             )
 
-            logger.info(f"Entity validation: min_confidence={self.min_confidence}, strict={self.strict_validation}")
+            logger.info(
+                f"Entity validation: min_confidence={self.min_confidence},"
+                f" strict={self.strict_validation}"
+            )
             logger.info(f"Overlap resolution strategy: {self.overlap_strategy}")
 
         except Exception as e:
@@ -128,7 +134,9 @@ class CloakExtraction:
                     raise FileNotFoundError(f"Model path does not exist: {model_path}")
                 self._initialize_components()
             else:
-                raise ValueError("Model path must be provided either during initialization or method call")
+                raise ValueError(
+                    "Model path must be provided either during initialization or method call"
+                )
 
     def extract_entities(
         self,
@@ -143,7 +151,7 @@ class CloakExtraction:
         min_confidence: Optional[float] = None,
         enable_validation: bool = True,
         resolve_overlaps: bool = True,
-        model_path: Optional[str] = None
+        model_path: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Extract entities from text with advanced validation and processing.
@@ -174,9 +182,9 @@ class CloakExtraction:
 
         # Set default labels if none provided
         if labels is None:
-            labels = ['person', 'date', 'location', 'organization']
+            labels = ["person", "date", "location", "organization"]
 
-        logger.info(f"Starting entity extraction:")
+        logger.info("Starting entity extraction:")
         logger.info(f"- Text length: {len(text)} characters")
         logger.info(f"- Labels: {labels}")
         logger.info(f"- Validation enabled: {enable_validation}")
@@ -200,14 +208,12 @@ class CloakExtraction:
                     labels=labels,
                     chunk_size=chunk_size,
                     max_workers=max_workers,
-                    use_parallel=True
+                    use_parallel=True,
                 )
                 passes_completed = 1  # Parallel processing doesn't use multi-pass
             else:
                 entities = self.extractor.predict(
-                    text=text,
-                    labels=labels,
-                    use_cache=use_cache and self.use_caching
+                    text=text, labels=labels, use_cache=use_cache and self.use_caching
                 )
                 passes_completed = max_passes
 
@@ -219,7 +225,9 @@ class CloakExtraction:
                 logger.info("--- Entity Validation Pipeline ---")
 
                 # Step 1: Position and confidence validation
-                confidence_threshold = min_confidence if min_confidence is not None else self.min_confidence
+                confidence_threshold = (
+                    min_confidence if min_confidence is not None else self.min_confidence
+                )
                 entities = self.validator.validate_entities(entities, text, confidence_threshold)
 
                 # Step 2: Overlap resolution
@@ -233,7 +241,9 @@ class CloakExtraction:
             if merge_entities and entities:
                 original_count = len(entities)
                 entities = self.merger.merge(entities, text)
-                logger.info(f"- Entities after merging: {len(entities)} (reduced from {original_count})")
+                logger.info(
+                    f"- Entities after merging: {len(entities)} (reduced from {original_count})"
+                )
 
             processing_time = time.time() - start_time
 
@@ -251,15 +261,17 @@ class CloakExtraction:
                     "validation_applied": enable_validation,
                     "overlap_resolution_applied": resolve_overlaps,
                     "validation_stats": validation_stats,
-                    "min_confidence_used": min_confidence if min_confidence is not None else self.min_confidence,
+                    "min_confidence_used": min_confidence
+                    if min_confidence is not None
+                    else self.min_confidence,
                     "labels_processed": labels,
                     "word_count": len(re.findall(r"\S+", text)),
-                    "auto_parallel_triggered": use_parallel if use_parallel is not None else None
-                }
+                    "auto_parallel_triggered": use_parallel if use_parallel is not None else None,
+                },
             }
 
             # Add cache statistics if caching is enabled
-            if self.use_caching and hasattr(self.extractor, 'get_cache_info'):
+            if self.use_caching and hasattr(self.extractor, "get_cache_info"):
                 result["processing_info"]["cache_stats"] = self.extractor.get_cache_info()
 
             logger.info(f"Extraction completed in {processing_time:.3f} seconds")
@@ -283,8 +295,8 @@ class CloakExtraction:
                 "entities_found": 0,
                 "validation_applied": False,
                 "overlap_resolution_applied": False,
-                "error": "Empty or invalid input text"
-            }
+                "error": "Empty or invalid input text",
+            },
         }
 
     def get_system_info(self) -> Dict[str, Any]:
@@ -305,20 +317,28 @@ class CloakExtraction:
                     "validation_enabled": True,
                     "min_confidence": self.min_confidence,
                     "strict_validation": self.strict_validation,
-                    "overlap_strategy": self.overlap_strategy
+                    "overlap_strategy": self.overlap_strategy,
                 },
                 "model_info": model_info,
                 "components": {
-                    "base_extractor": type(self.base_extractor).__name__ if self.base_extractor else "Not initialized",
-                    "extractor": type(self.extractor).__name__ if self.extractor else "Not initialized",
-                    "parallel_processor": type(self.parallel_processor).__name__ if self.parallel_processor else "Not initialized", 
+                    "base_extractor": type(self.base_extractor).__name__
+                    if self.base_extractor
+                    else "Not initialized",
+                    "extractor": type(self.extractor).__name__
+                    if self.extractor
+                    else "Not initialized",
+                    "parallel_processor": type(self.parallel_processor).__name__
+                    if self.parallel_processor
+                    else "Not initialized",
                     "merger": type(self.merger).__name__ if self.merger else "Not initialized",
-                    "validator": type(self.validator).__name__ if self.validator else "Not initialized"
-                }
+                    "validator": type(self.validator).__name__
+                    if self.validator
+                    else "Not initialized",
+                },
             }
 
             # Add cache info if available
-            if self.use_caching and self.extractor and hasattr(self.extractor, 'get_cache_info'):
+            if self.use_caching and self.extractor and hasattr(self.extractor, "get_cache_info"):
                 info["cache_info"] = self.extractor.get_cache_info()
 
             return info
@@ -329,7 +349,7 @@ class CloakExtraction:
 
     def clear_cache(self):
         """Clear the extraction cache if caching is enabled."""
-        if self.use_caching and self.extractor and hasattr(self.extractor, 'clear_cache'):
+        if self.use_caching and self.extractor and hasattr(self.extractor, "clear_cache"):
             self.extractor.clear_cache()
             logger.info("Cache cleared successfully")
         else:

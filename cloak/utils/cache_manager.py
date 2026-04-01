@@ -10,9 +10,10 @@ Version: 1.0.0
 
 import functools
 import logging
-from typing import List, Dict, Any, Tuple, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
+
 
 class CacheManager:
     """
@@ -63,6 +64,7 @@ class CacheManager:
         Returns:
             Cached version of the function
         """
+
         @functools.lru_cache(maxsize=self.maxsize)
         def cached_extractor(text: str, labels_tuple: Tuple[str, ...]):
             """
@@ -108,7 +110,9 @@ class CacheManager:
             Dictionary with cache statistics
         """
         hit_rate = (self.cache_hits / self.total_requests * 100) if self.total_requests > 0 else 0
-        miss_rate = (self.cache_misses / self.total_requests * 100) if self.total_requests > 0 else 0
+        miss_rate = (
+            (self.cache_misses / self.total_requests * 100) if self.total_requests > 0 else 0
+        )
 
         return {
             "cache_hits": self.cache_hits,
@@ -117,15 +121,16 @@ class CacheManager:
             "hit_rate_percentage": round(hit_rate, 2),
             "miss_rate_percentage": round(miss_rate, 2),
             "maxsize": self.maxsize,
-            "efficiency": "High" if hit_rate > 70 else "Medium" if hit_rate > 40 else "Low"
+            "efficiency": "High" if hit_rate > 70 else "Medium" if hit_rate > 40 else "Low",
         }
 
     def clear_stats(self):
         """Reset cache statistics."""
         self.cache_hits = 0
-        self.cache_misses = 0 
+        self.cache_misses = 0
         self.total_requests = 0
         logger.info("Cache statistics reset")
+
 
 class CachedEntityExtractor:
     """
@@ -146,9 +151,7 @@ class CachedEntityExtractor:
         self.cache_manager = CacheManager(maxsize)
 
         # Create cached version of the predict method
-        self._cached_predict = self.cache_manager.create_cached_extractor(
-            self._uncached_predict
-        )
+        self._cached_predict = self.cache_manager.create_cached_extractor(self._uncached_predict)
 
         logger.info(f"CachedEntityExtractor initialized with cache size {maxsize}")
 
@@ -161,10 +164,7 @@ class CachedEntityExtractor:
             return []
 
     def predict(
-        self,
-        text: str,
-        labels: Optional[List[str]] = None,
-        use_cache: bool = True
+        self, text: str, labels: Optional[List[str]] = None, use_cache: bool = True
     ) -> List[Dict[str, Any]]:
         """
         Predict entities with optional caching.
@@ -206,8 +206,10 @@ class CachedEntityExtractor:
                 "lru_cache_misses": cache_info.misses,
                 "lru_cache_current_size": cache_info.currsize,
                 "lru_cache_max_size": cache_info.maxsize,
-                "lru_cache_hit_ratio": cache_info.hits / (cache_info.hits + cache_info.misses) if (cache_info.hits + cache_info.misses) > 0 else 0,
-                "manager_stats": manager_stats
+                "lru_cache_hit_ratio": cache_info.hits / (cache_info.hits + cache_info.misses)
+                if (cache_info.hits + cache_info.misses) > 0
+                else 0,
+                "manager_stats": manager_stats,
             }
         except Exception as e:
             logger.error(f"Failed to get cache info: {str(e)}")

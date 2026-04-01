@@ -10,18 +10,16 @@ Version: 1.0.0
 
 import concurrent.futures
 import logging
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
 
 from .chunker import chunk_text
 from .extractor import EntityExtractor
 
 logger = logging.getLogger(__name__)
 
+
 def extract_entities_for_chunk(
-    chunk_text: str,
-    offset: int,
-    extractor: EntityExtractor,
-    categories: Optional[List[str]] = None
+    chunk_text: str, offset: int, extractor: EntityExtractor, categories: Optional[List[str]] = None
 ) -> List[Dict[str, Any]]:
     """
     Extracts entities from a single chunk using the provided extractor.
@@ -59,12 +57,13 @@ def extract_entities_for_chunk(
         logger.error(f"Error extracting entities for chunk: {str(e)}")
         return []
 
+
 def extract_entities_in_parallel(
     full_text: str,
     extractor: EntityExtractor,
     chunk_size: int = 250,
     max_workers: int = 4,
-    categories: Optional[List[str]] = None
+    categories: Optional[List[str]] = None,
 ) -> List[Dict[str, Any]]:
     """
     Splits the text into chunks, and extracts entities from each chunk in parallel
@@ -109,7 +108,7 @@ def extract_entities_in_parallel(
                     chunk_text=chunk_str,
                     offset=offset,
                     extractor=extractor,
-                    categories=categories
+                    categories=categories,
                 )
                 futures.append(future)
 
@@ -121,18 +120,24 @@ def extract_entities_in_parallel(
                     partial_entities = future.result()
                     all_entities.extend(partial_entities)
                     successful_chunks += 1
-                    logger.debug(f"Completed chunk {successful_chunks}/{len(futures)}: found {len(partial_entities)} entities")
+                    logger.debug(
+                        f"Completed chunk {successful_chunks}/{len(futures)}:"
+                        f" found {len(partial_entities)} entities"
+                    )
                 except Exception as e:
                     failed_chunks += 1
-                    logger.error(f"Error processing chunk {i+1}: {str(e)}")
+                    logger.error(f"Error processing chunk {i + 1}: {str(e)}")
 
-        logger.info(f"Parallel extraction complete. Processed {successful_chunks}/{len(chunks)} chunks successfully")
+        logger.info(
+            f"Parallel extraction complete. Processed"
+            f" {successful_chunks}/{len(chunks)} chunks successfully"
+        )
         if failed_chunks > 0:
             logger.warning(f"Failed to process {failed_chunks} chunks")
 
         # Step 3: Sort by start position for consistent output
         try:
-            all_entities.sort(key=lambda x: x['start'])
+            all_entities.sort(key=lambda x: x["start"])
         except (KeyError, TypeError) as e:
             logger.error(f"Error sorting entities: {str(e)}")
 
@@ -142,6 +147,7 @@ def extract_entities_in_parallel(
     except Exception as e:
         logger.error(f"Error in parallel extraction: {str(e)}")
         return []
+
 
 class ParallelEntityProcessor:
     """
@@ -162,7 +168,7 @@ class ParallelEntityProcessor:
             self.model_path = model_path
             self.onnx_model_file = onnx_model_file
             self.extractor = EntityExtractor(model_path, onnx_model_file)
-            logger.info(f"ParallelEntityProcessor initialized")
+            logger.info("ParallelEntityProcessor initialized")
         except Exception as e:
             logger.error(f"Failed to initialize ParallelEntityProcessor: {str(e)}")
             raise
@@ -173,7 +179,7 @@ class ParallelEntityProcessor:
         labels: Optional[List[str]] = None,
         chunk_size: int = 250,
         max_workers: int = 4,
-        use_parallel: Optional[bool] = None
+        use_parallel: Optional[bool] = None,
     ) -> List[Dict[str, Any]]:
         """
         Process text with automatic parallel detection and enhanced error handling.
@@ -199,7 +205,10 @@ class ParallelEntityProcessor:
                 word_count = len(text.split())
                 use_parallel = word_count > chunk_size
 
-            logger.info(f"Processing text ({len(text)} chars, ~{len(text.split())} words) - Parallel: {use_parallel}")
+            logger.info(
+                f"Processing text ({len(text)} chars,"
+                f" ~{len(text.split())} words) - Parallel: {use_parallel}"
+            )
 
             if use_parallel:
                 return extract_entities_in_parallel(
@@ -207,7 +216,7 @@ class ParallelEntityProcessor:
                     self.extractor,
                     chunk_size=chunk_size,
                     max_workers=max_workers,
-                    categories=labels
+                    categories=labels,
                 )
             else:
                 # Single-pass processing for smaller texts

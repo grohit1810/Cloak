@@ -4,15 +4,16 @@ Entity Validator - Enhanced
 Provides robust validation and filtering for detected entities.
 Enhanced with improved error handling and additional validation features.
 
-Author: G Rohit (Enhanced from original)  
+Author: G Rohit (Enhanced from original)
 Version: 1.0.0
 """
 
-from typing import List, Dict, Any, Optional
-import re
 import logging
+import re
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
+
 
 class EntityValidator:
     """
@@ -37,16 +38,16 @@ class EntityValidator:
             "position_invalid": 0,
             "text_mismatch": 0,
             "valid_entities": 0,
-            "validation_errors": 0
+            "validation_errors": 0,
         }
 
-        logger.info(f"EntityValidator initialized: min_confidence={min_confidence}, strict={strict_validation}")
+        logger.info(
+            f"EntityValidator initialized: min_confidence={min_confidence},"
+            f" strict={strict_validation}"
+        )
 
     def validate_entities(
-        self,
-        entities: List[Dict[str, Any]],
-        text: str,
-        min_confidence: Optional[float] = None
+        self, entities: List[Dict[str, Any]], text: str, min_confidence: Optional[float] = None
     ) -> List[Dict[str, Any]]:
         """
         Comprehensive entity validation pipeline.
@@ -105,7 +106,9 @@ class EntityValidator:
 
         logger.info(f"Validation complete: {len(validated)}/{len(entities)} entities passed")
         if self.validation_stats["confidence_filtered"] > 0:
-            logger.info(f" - Filtered by confidence: {self.validation_stats['confidence_filtered']}")
+            logger.info(
+                f" - Filtered by confidence: {self.validation_stats['confidence_filtered']}"
+            )
         if self.validation_stats["position_invalid"] > 0:
             logger.info(f" - Invalid positions: {self.validation_stats['position_invalid']}")
         if self.validation_stats["text_mismatch"] > 0:
@@ -118,7 +121,7 @@ class EntityValidator:
     def _validate_confidence(self, entity: Dict[str, Any], min_confidence: float) -> bool:
         """Validate entity confidence score."""
         try:
-            score = entity.get('score', 0.0)
+            score = entity.get("score", 0.0)
             return isinstance(score, (int, float)) and score >= min_confidence
         except Exception as e:
             logger.debug(f"Confidence validation error: {str(e)}")
@@ -127,8 +130,8 @@ class EntityValidator:
     def _validate_position(self, entity: Dict[str, Any], text: str) -> bool:
         """Validate entity position boundaries."""
         try:
-            start = entity.get('start', -1)
-            end = entity.get('end', -1)
+            start = entity.get("start", -1)
+            end = entity.get("end", -1)
             text_length = len(text)
 
             # Check basic position validity
@@ -158,9 +161,9 @@ class EntityValidator:
     def _validate_text_consistency(self, entity: Dict[str, Any], text: str) -> bool:
         """Validate that entity text matches the text at specified positions."""
         try:
-            start = entity.get('start')
-            end = entity.get('end')
-            entity_text = entity.get('text', '')
+            start = entity.get("start")
+            end = entity.get("end")
+            entity_text = entity.get("text", "")
 
             if start is None or end is None:
                 return False
@@ -168,8 +171,8 @@ class EntityValidator:
             actual_text = text[start:end]
 
             # Normalize whitespace for comparison
-            normalized_entity = re.sub(r'\s+', ' ', entity_text.strip())
-            normalized_actual = re.sub(r'\s+', ' ', actual_text.strip())
+            normalized_entity = re.sub(r"\s+", " ", entity_text.strip())
+            normalized_actual = re.sub(r"\s+", " ", actual_text.strip())
 
             # Allow for minor whitespace differences
             if normalized_entity == normalized_actual:
@@ -196,23 +199,23 @@ class EntityValidator:
 
             # Ensure text matches actual position
             if self.strict_validation:
-                start = cleaned.get('start')
-                end = cleaned.get('end')
+                start = cleaned.get("start")
+                end = cleaned.get("end")
                 if start is not None and end is not None:
                     actual_text = text[start:end]
-                    cleaned['text'] = actual_text.strip()
+                    cleaned["text"] = actual_text.strip()
 
             # Normalize label
-            if 'label' in cleaned:
-                cleaned['label'] = cleaned['label'].lower().strip()
+            if "label" in cleaned:
+                cleaned["label"] = cleaned["label"].lower().strip()
 
             # Ensure score is a float
-            if 'score' in cleaned:
-                cleaned['score'] = float(cleaned['score'])
+            if "score" in cleaned:
+                cleaned["score"] = float(cleaned["score"])
 
             # Add validation metadata
-            cleaned['validated'] = True
-            cleaned['validator_version'] = '1.0.0'
+            cleaned["validated"] = True
+            cleaned["validator_version"] = "1.0.0"
 
             return cleaned
 
@@ -221,9 +224,7 @@ class EntityValidator:
             return entity
 
     def resolve_overlaps(
-        self,
-        entities: List[Dict[str, Any]],
-        strategy: str = "highest_confidence"
+        self, entities: List[Dict[str, Any]], strategy: str = "highest_confidence"
     ) -> List[Dict[str, Any]]:
         """
         Resolve overlapping entities using specified strategy.
@@ -243,7 +244,9 @@ class EntityValidator:
             if not overlaps:
                 return entities.copy()
 
-            logger.info(f"Resolving {len(overlaps)} overlapping entity pairs using '{strategy}' strategy")
+            logger.info(
+                f"Resolving {len(overlaps)} overlapping entity pairs using '{strategy}' strategy"
+            )
 
             # Mark entities to remove
             to_remove = set()
@@ -255,12 +258,12 @@ class EntityValidator:
                 entity1, entity2 = entities[idx1], entities[idx2]
 
                 if strategy == "highest_confidence":
-                    score1 = entity1.get('score', 0.0)
-                    score2 = entity2.get('score', 0.0)
+                    score1 = entity1.get("score", 0.0)
+                    score2 = entity2.get("score", 0.0)
                     to_remove.add(idx1 if score2 > score1 else idx2)
                 elif strategy == "longest":
-                    len1 = entity1.get('end', 0) - entity1.get('start', 0)
-                    len2 = entity2.get('end', 0) - entity2.get('start', 0)
+                    len1 = entity1.get("end", 0) - entity1.get("start", 0)
+                    len2 = entity2.get("end", 0) - entity2.get("start", 0)
                     to_remove.add(idx1 if len2 > len1 else idx2)
                 elif strategy == "first":
                     to_remove.add(idx2)  # Keep the first one
@@ -284,7 +287,7 @@ class EntityValidator:
 
         try:
             for i, entity1 in enumerate(entities):
-                for j, entity2 in enumerate(entities[i+1:], i+1):
+                for j, entity2 in enumerate(entities[i + 1 :], i + 1):
                     if self._entities_overlap(entity1, entity2):
                         overlaps.append((i, j))
         except Exception as e:
@@ -295,8 +298,8 @@ class EntityValidator:
     def _entities_overlap(self, entity1: Dict[str, Any], entity2: Dict[str, Any]) -> bool:
         """Check if two entities have overlapping positions."""
         try:
-            start1, end1 = entity1.get('start', 0), entity1.get('end', 0)
-            start2, end2 = entity2.get('start', 0), entity2.get('end', 0)
+            start1, end1 = entity1.get("start", 0), entity1.get("end", 0)
+            start2, end2 = entity2.get("start", 0), entity2.get("end", 0)
             return not (end1 <= start2 or end2 <= start1)
         except Exception as e:
             logger.debug(f"Error checking entity overlap: {str(e)}")

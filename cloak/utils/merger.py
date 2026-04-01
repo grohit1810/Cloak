@@ -9,9 +9,10 @@ Version: 1.0.0
 """
 
 import logging
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
+
 
 class EntityMerger:
     """
@@ -32,11 +33,7 @@ class EntityMerger:
         """
         self.max_gap = max_gap
         self.enable_logging = enable_logging
-        self.merge_stats = {
-            'total_processed': 0,
-            'total_merged': 0,
-            'merges_by_label': {}
-        }
+        self.merge_stats = {"total_processed": 0, "total_merged": 0, "merges_by_label": {}}
 
     def merge(self, entities: List[Dict[str, Any]], text: str) -> List[Dict[str, Any]]:
         """
@@ -53,10 +50,10 @@ class EntityMerger:
             return []
 
         original_count = len(entities)
-        self.merge_stats['total_processed'] += original_count
+        self.merge_stats["total_processed"] += original_count
 
         # Sort entities by start position to ensure proper merging
-        entities = sorted(entities, key=lambda x: x['start'])
+        entities = sorted(entities, key=lambda x: x["start"])
 
         merged = []
         current = entities[0].copy()
@@ -67,23 +64,25 @@ class EntityMerger:
             # 1. Same label
             # 2. Adjacent (next starts where current ends) OR
             # 3. Small gap (next starts within max_gap after current ends)
-            if (next_entity["label"] == current["label"] and
-                (next_entity["start"] == current["end"] or
-                 next_entity["start"] <= current["end"] + self.max_gap)):
-
+            if next_entity["label"] == current["label"] and (
+                next_entity["start"] == current["end"]
+                or next_entity["start"] <= current["end"] + self.max_gap
+            ):
                 # Merge: text from current start to next entity's end
                 merged_text = text[current["start"] : next_entity["end"]].strip()
                 current["text"] = merged_text
                 current["end"] = next_entity["end"]
 
                 # Update score using weighted average
-                current["score"] = (
-                    current["score"] * current["count"] + next_entity["score"]
-                ) / (current["count"] + 1)
+                current["score"] = (current["score"] * current["count"] + next_entity["score"]) / (
+                    current["count"] + 1
+                )
                 current["count"] += 1
 
                 if self.enable_logging:
-                    logger.debug(f"Merged entities: '{current['text']}' (count: {current['count']})")
+                    logger.debug(
+                        f"Merged entities: '{current['text']}' (count: {current['count']})"
+                    )
 
             else:
                 # Cannot merge, add current to results and start new current
@@ -98,13 +97,13 @@ class EntityMerger:
 
         # Update statistics
         merges_applied = original_count - len(merged)
-        self.merge_stats['total_merged'] += merges_applied
+        self.merge_stats["total_merged"] += merges_applied
 
         # Track merges by label
         for entity in entities:
-            label = entity['label']
-            if label not in self.merge_stats['merges_by_label']:
-                self.merge_stats['merges_by_label'][label] = 0
+            label = entity["label"]
+            if label not in self.merge_stats["merges_by_label"]:
+                self.merge_stats["merges_by_label"][label] = 0
 
         if self.enable_logging:
             logger.info(f"Entity merging complete: {original_count} -> {len(merged)} entities")
@@ -122,14 +121,13 @@ class EntityMerger:
         Returns:
             True if entities can be merged, False otherwise
         """
-        return (
-            entity1["label"] == entity2["label"] and
-            (entity2["start"] == entity1["end"] or
-             entity2["start"] <= entity1["end"] + self.max_gap)
+        return entity1["label"] == entity2["label"] and (
+            entity2["start"] == entity1["end"] or entity2["start"] <= entity1["end"] + self.max_gap
         )
 
-    def get_merge_statistics(self, original_entities: List[Dict[str, Any]],
-                           merged_entities: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def get_merge_statistics(
+        self, original_entities: List[Dict[str, Any]], merged_entities: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
         """
         Get statistics about the merging process.
 
@@ -141,7 +139,9 @@ class EntityMerger:
             Dictionary with merge statistics
         """
         merge_reduction = len(original_entities) - len(merged_entities)
-        reduction_percentage = (merge_reduction / len(original_entities) * 100) if original_entities else 0
+        reduction_percentage = (
+            (merge_reduction / len(original_entities) * 100) if original_entities else 0
+        )
 
         # Count entities by label in both lists
         original_by_label = {}
@@ -162,15 +162,11 @@ class EntityMerger:
             "reduction_percentage": reduction_percentage,
             "original_by_label": original_by_label,
             "merged_by_label": merged_by_label,
-            "global_stats": self.merge_stats
+            "global_stats": self.merge_stats,
         }
 
     def reset_statistics(self):
         """Reset merge statistics."""
-        self.merge_stats = {
-            'total_processed': 0,
-            'total_merged': 0,
-            'merges_by_label': {}
-        }
+        self.merge_stats = {"total_processed": 0, "total_merged": 0, "merges_by_label": {}}
         if self.enable_logging:
             logger.info("Merge statistics reset")

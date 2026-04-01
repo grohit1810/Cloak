@@ -6,20 +6,10 @@ Version: 1.0.0
 """
 
 import pytest
-from unittest.mock import Mock, patch
-import sys
-import os
 
-# Add the parent directory to the path so we can import cloak
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from cloak.anonymization.redactor import EntityRedactor, RedactionDetail
+from cloak.anonymization.replacer import EntityReplacer, ReplacementDetail
 
-try:
-    import cloak
-    from CloakExtraction import CloakExtraction
-    from anonymization.redactor import EntityRedactor, RedactionDetail
-    from anonymization.replacer import EntityReplacer, ReplacementDetail
-except ImportError as e:
-    pytest.skip(f"Could not import modules: {e}", allow_module_level=True)
 
 class TestBasicFunctionality:
     """Test basic Cloak functionality."""
@@ -29,11 +19,11 @@ class TestBasicFunctionality:
         detail = RedactionDetail(
             label="person",
             original="John",
-            placeholder="#1_PERSON_REDACTED", 
+            placeholder="#1_PERSON_REDACTED",
             start=0,
             end=4,
             score=0.9,
-            redaction_id="1"
+            redaction_id="1",
         )
 
         assert detail.label == "person"
@@ -48,12 +38,12 @@ class TestBasicFunctionality:
         """Test ReplacementDetail dataclass creation."""
         detail = ReplacementDetail(
             label="person",
-            original="John", 
+            original="John",
             replacement="Alice",
             start=0,
             end=4,
             score=0.9,
-            strategy_used="faker"
+            strategy_used="faker",
         )
 
         assert detail.label == "person"
@@ -65,7 +55,7 @@ class TestBasicFunctionality:
         assert detail.strategy_used == "faker"
 
     def test_entity_redactor_initialization(self):
-        """Test EntityRedactor initialization.""" 
+        """Test EntityRedactor initialization."""
         redactor = EntityRedactor()
 
         assert redactor.default_format == "#{id}_{label}_REDACTED"
@@ -84,8 +74,8 @@ class TestBasicFunctionality:
         """Test EntityReplacer initialization."""
         replacer = EntityReplacer()
 
-        assert replacer.locale == 'en_US'
-        assert replacer.ensure_consistency == True
+        assert replacer.locale == "en_US"
+        assert replacer.ensure_consistency is True
         assert replacer.replacement_cache == {}
         assert replacer.strategies is not None
 
@@ -93,29 +83,24 @@ class TestBasicFunctionality:
         """Test redactor with empty entities list."""
         redactor = EntityRedactor()
 
-        result = redactor.redact(
-            text="This is a test.",
-            entities=[]
-        )
+        result = redactor.redact(text="This is a test.", entities=[])
 
-        assert result['anonymized_text'] == "This is a test."
-        assert result['replacements'] == []
-        assert result['redaction_info']['entities_processed'] == 0
-        assert result['redaction_info']['redactions_applied'] == 0
+        assert result["anonymized_text"] == "This is a test."
+        assert result["replacements"] == []
+        assert result["redaction_info"]["entities_processed"] == 0
+        assert result["redaction_info"]["redactions_applied"] == 0
 
     def test_replacer_empty_entities(self):
         """Test replacer with empty entities list."""
         replacer = EntityReplacer()
 
-        result = replacer.replace(
-            text="This is a test.",
-            entities=[]
-        )
+        result = replacer.replace(text="This is a test.", entities=[])
 
-        assert result['anonymized_text'] == "This is a test."
-        assert result['replacements'] == []
-        assert result['replacement_info']['entities_processed'] == 0
-        assert result['replacement_info']['replacements_applied'] == 0
+        assert result["anonymized_text"] == "This is a test."
+        assert result["replacements"] == []
+        assert result["replacement_info"]["entities_processed"] == 0
+        assert result["replacement_info"]["replacements_applied"] == 0
+
 
 class TestUtilityFunctions:
     """Test utility functions and classes."""
@@ -124,21 +109,18 @@ class TestUtilityFunctions:
         """Test basic pipeline without actual model."""
         # This test would require mocking the GLiNER model
         # For now, just test that we can import the classes
-        try:
-            from utils.merger import EntityMerger
-            from utils.cache_manager import CacheManager
-            from utils.entity_validator import EntityValidator
+        from cloak.utils.cache_manager import CacheManager
+        from cloak.utils.entity_validator import EntityValidator
+        from cloak.utils.merger import EntityMerger
 
-            merger = EntityMerger()
-            cache_manager = CacheManager()
-            validator = EntityValidator()
+        merger = EntityMerger()
+        cache_manager = CacheManager()
+        validator = EntityValidator()
 
-            assert merger is not None
-            assert cache_manager is not None  
-            assert validator is not None
+        assert merger is not None
+        assert cache_manager is not None
+        assert validator is not None
 
-        except ImportError:
-            pytest.skip("Could not import utility classes")
 
 if __name__ == "__main__":
     pytest.main([__file__])

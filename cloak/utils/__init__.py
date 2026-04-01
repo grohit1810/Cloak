@@ -7,13 +7,8 @@ Provides:
 - EntityValidator: Comprehensive validation and overlap resolution
 """
 
-from .merger import EntityMerger
-from .cache_manager import CacheManager, CachedEntityExtractor
+from .cache_manager import CachedEntityExtractor, CacheManager
 from .entity_validator import EntityValidator
+from .merger import EntityMerger
 
-__all__ = [
-    'EntityMerger', 
-    'CacheManager', 
-    'CachedEntityExtractor', 
-    'EntityValidator'
-]
+__all__ = ["EntityMerger", "CacheManager", "CachedEntityExtractor", "EntityValidator"]

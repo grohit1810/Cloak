@@ -8,15 +8,16 @@ Author: G Rohit (Enhanced from original)
 Version: 1.0.0
 """
 
-import warnings
 import logging
-from typing import List, Dict, Any, Optional
+import warnings
+from typing import Any, Dict, List, Optional
 
 # Placeholder for GLiNERONNXModel - would need to be implemented
 # from models.gliner_onnx import GLiNERONNXModel
 
 warnings.filterwarnings("ignore")
 logger = logging.getLogger(__name__)
+
 
 class EntityExtractor:
     """
@@ -51,10 +52,7 @@ class EntityExtractor:
             raise
 
     def predict(
-        self,
-        text: str,
-        labels: Optional[List[str]] = None,
-        max_passes: int = 2
+        self, text: str, labels: Optional[List[str]] = None, max_passes: int = 2
     ) -> List[Dict[str, Any]]:
         """
         Iteratively finds entities by masking found entities and re-running the model.
@@ -90,7 +88,7 @@ class EntityExtractor:
 
         for pass_num in range(max_passes):
             try:
-                current_text_to_process = "".join(mutable_text_list)
+                current_text_to_process = "".join(mutable_text_list)  # noqa: F841
 
                 # Determine threshold based on pass number - ENHANCED: decreasing thresholds
                 if pass_num == 0:
@@ -108,7 +106,10 @@ class EntityExtractor:
                 # )
                 newly_found_entities = []  # Placeholder
 
-                logger.info(f"Pass {pass_num + 1}: Found {len(newly_found_entities)} entities with threshold {threshold}")
+                logger.info(
+                    f"Pass {pass_num + 1}: Found {len(newly_found_entities)} entities"
+                    f" with threshold {threshold}"
+                )
 
                 # If the model finds nothing, we can stop
                 if not newly_found_entities:
@@ -118,7 +119,7 @@ class EntityExtractor:
                 # Filter out any entities we've already processed to avoid loops
                 unique_new_entities = []
                 for ent in newly_found_entities:
-                    span = (ent['start'], ent['end'])
+                    span = (ent["start"], ent["end"])
                     if span not in processed_spans:
                         unique_new_entities.append(ent)
                         processed_spans.add(span)
@@ -137,9 +138,9 @@ class EntityExtractor:
                 # This preserves the indices for the next pass
                 for entity in unique_new_entities:
                     try:
-                        for i in range(entity['start'], entity['end']):
+                        for i in range(entity["start"], entity["end"]):
                             if i < len(mutable_text_list):
-                                mutable_text_list[i] = ' '
+                                mutable_text_list[i] = " "
                     except (KeyError, TypeError) as e:
                         logger.warning(f"Error masking entity {entity}: {str(e)}")
                         continue
@@ -152,7 +153,7 @@ class EntityExtractor:
 
         # Sort the final combined list by start position
         try:
-            all_entities.sort(key=lambda x: x['start'])
+            all_entities.sort(key=lambda x: x["start"])
         except (KeyError, TypeError) as e:
             logger.error(f"Error sorting entities: {str(e)}")
 
@@ -168,7 +169,7 @@ class EntityExtractor:
                 "model_file": self.onnx_model_file,
                 "status": "initialized" if self.model else "not_initialized",
                 "type": "GLiNER_ONNX",
-                "version": "1.0.0"
+                "version": "1.0.0",
             }
         except Exception as e:
             logger.error(f"Error getting model info: {str(e)}")

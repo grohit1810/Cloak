@@ -1,20 +1,20 @@
 """
-Date Replacement Strategy  
+Date Replacement Strategy
 
 Specialized strategy for handling date entities while preserving format context.
 Supports various date formats and maintains temporal plausibility.
 
 Author: G Rohit
-Version: 1.0.0  
+Version: 1.0.0
 """
 
-import re
-import random
 import logging
-from typing import Dict, Any, Optional
-from datetime import datetime, timedelta
+import random
+import re
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
+
 
 class DateReplacementStrategy:
     """Replacement strategy for dates with format preservation."""
@@ -28,18 +28,25 @@ class DateReplacementStrategy:
         """
         self.faker = faker_instance
         self.supported_labels = {
-            'date', 'time', 'datetime', 'day', 'month', 'year',
-            'birthday', 'dob', 'date_of_birth'
+            "date",
+            "time",
+            "datetime",
+            "day",
+            "month",
+            "year",
+            "birthday",
+            "dob",
+            "date_of_birth",
         }
 
         # Date pattern matching
         self.date_patterns = {
-            r'\b\d{1,2}/\d{1,2}/\d{4}\b': self._replace_mdy_format,           # MM/DD/YYYY
-            r'\b\d{1,2}-\d{1,2}-\d{4}\b': self._replace_mdy_dash_format,      # MM-DD-YYYY  
-            r'\b\d{4}-\d{1,2}-\d{1,2}\b': self._replace_ymd_format,           # YYYY-MM-DD
-            r'\b\d{1,2}\s+\w+\s+\d{4}\b': self._replace_text_format,        # DD Month YYYY
-            r'\b\w+\s+\d{1,2},?\s+\d{4}\b': self._replace_month_text_format, # Month DD, YYYY
-            r'\b\d{4}\b': self._replace_year_only,                              # YYYY only
+            r"\b\d{1,2}/\d{1,2}/\d{4}\b": self._replace_mdy_format,  # MM/DD/YYYY
+            r"\b\d{1,2}-\d{1,2}-\d{4}\b": self._replace_mdy_dash_format,  # MM-DD-YYYY
+            r"\b\d{4}-\d{1,2}-\d{1,2}\b": self._replace_ymd_format,  # YYYY-MM-DD
+            r"\b\d{1,2}\s+\w+\s+\d{4}\b": self._replace_text_format,  # DD Month YYYY
+            r"\b\w+\s+\d{1,2},?\s+\d{4}\b": self._replace_month_text_format,  # Month DD, YYYY
+            r"\b\d{4}\b": self._replace_year_only,  # YYYY only
         }
 
     def can_handle(self, label: str) -> bool:
@@ -56,8 +63,8 @@ class DateReplacementStrategy:
         Returns:
             Generated date string or None if failed
         """
-        original_text = entity['text'].strip()
-        label = entity['label'].lower()
+        original_text = entity["text"].strip()
+        label = entity["label"].lower()
 
         try:
             # Try pattern-based replacement first
@@ -81,34 +88,46 @@ class DateReplacementStrategy:
     def _replace_mdy_format(self, original: str) -> str:
         """Replace MM/DD/YYYY format."""
         if self.faker:
-            fake_date = self.faker.date_between(start_date='-30y', end_date='today')
-            return fake_date.strftime('%m/%d/%Y')
+            fake_date = self.faker.date_between(start_date="-30y", end_date="today")
+            return fake_date.strftime("%m/%d/%Y")
         return self._random_mdy_date()
 
     def _replace_mdy_dash_format(self, original: str) -> str:
         """Replace MM-DD-YYYY format."""
         if self.faker:
-            fake_date = self.faker.date_between(start_date='-30y', end_date='today')  
-            return fake_date.strftime('%m-%d-%Y')
-        return self._random_mdy_date().replace('/', '-')
+            fake_date = self.faker.date_between(start_date="-30y", end_date="today")
+            return fake_date.strftime("%m-%d-%Y")
+        return self._random_mdy_date().replace("/", "-")
 
     def _replace_ymd_format(self, original: str) -> str:
         """Replace YYYY-MM-DD format."""
         if self.faker:
-            fake_date = self.faker.date_between(start_date='-30y', end_date='today')
-            return fake_date.strftime('%Y-%m-%d')
-        return f"{random.randint(1990, 2023)}-{random.randint(1, 12):02d}-{random.randint(1, 28):02d}"
+            fake_date = self.faker.date_between(start_date="-30y", end_date="today")
+            return fake_date.strftime("%Y-%m-%d")
+        return (
+            f"{random.randint(1990, 2023)}-{random.randint(1, 12):02d}-{random.randint(1, 28):02d}"
+        )
 
     def _replace_text_format(self, original: str) -> str:
         """Replace 'DD Month YYYY' format."""
         months = [
-            'January', 'February', 'March', 'April', 'May', 'June',
-            'July', 'August', 'September', 'October', 'November', 'December'
+            "January",
+            "February",
+            "March",
+            "April",
+            "May",
+            "June",
+            "July",
+            "August",
+            "September",
+            "October",
+            "November",
+            "December",
         ]
 
         if self.faker:
-            fake_date = self.faker.date_between(start_date='-30y', end_date='today')
-            return fake_date.strftime('%d %B %Y')
+            fake_date = self.faker.date_between(start_date="-30y", end_date="today")
+            return fake_date.strftime("%d %B %Y")
 
         day = random.randint(1, 28)
         month = random.choice(months)
@@ -116,15 +135,25 @@ class DateReplacementStrategy:
         return f"{day} {month} {year}"
 
     def _replace_month_text_format(self, original: str) -> str:
-        """Replace 'Month DD, YYYY' format.""" 
+        """Replace 'Month DD, YYYY' format."""
         months = [
-            'January', 'February', 'March', 'April', 'May', 'June',
-            'July', 'August', 'September', 'October', 'November', 'December'
+            "January",
+            "February",
+            "March",
+            "April",
+            "May",
+            "June",
+            "July",
+            "August",
+            "September",
+            "October",
+            "November",
+            "December",
         ]
 
         if self.faker:
-            fake_date = self.faker.date_between(start_date='-30y', end_date='today')
-            return fake_date.strftime('%B %d, %Y')
+            fake_date = self.faker.date_between(start_date="-30y", end_date="today")
+            return fake_date.strftime("%B %d, %Y")
 
         month = random.choice(months)
         day = random.randint(1, 28)
@@ -139,14 +168,14 @@ class DateReplacementStrategy:
 
     def _faker_date_replacement(self, label: str) -> str:
         """Generate date using Faker based on label."""
-        if label in ['birthday', 'dob', 'date_of_birth']:
+        if label in ["birthday", "dob", "date_of_birth"]:
             # Generate older dates for birthdays
-            fake_date = self.faker.date_between(start_date='-80y', end_date='-18y')
+            fake_date = self.faker.date_between(start_date="-80y", end_date="-18y")
         else:
             # General date range
-            fake_date = self.faker.date_between(start_date='-10y', end_date='today')
+            fake_date = self.faker.date_between(start_date="-10y", end_date="today")
 
-        return fake_date.strftime('%Y-%m-%d')
+        return fake_date.strftime("%Y-%m-%d")
 
     def _simple_date_replacement(self, original: str) -> str:
         """Simple fallback date replacement."""

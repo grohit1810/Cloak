@@ -8,12 +8,13 @@ Author: G Rohit
 Version: 1.0.0
 """
 
+import logging
 import random
 import string
-import logging
-from typing import Dict, Any, Optional
+from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
+
 
 class DefaultReplacementStrategy:
     """Default fallback replacement strategy."""
@@ -21,13 +22,13 @@ class DefaultReplacementStrategy:
     def __init__(self):
         """Initialize default strategy."""
         self.replacement_patterns = {
-            'email': self._generate_email,
-            'phone': self._generate_phone,
-            'ssn': self._generate_ssn,
-            'id': self._generate_id,
-            'number': self._generate_number,
-            'code': self._generate_code,
-            'username': self._generate_username
+            "email": self._generate_email,
+            "phone": self._generate_phone,
+            "ssn": self._generate_ssn,
+            "id": self._generate_id,
+            "number": self._generate_number,
+            "code": self._generate_code,
+            "username": self._generate_username,
         }
 
     def can_handle(self, label: str) -> bool:
@@ -44,8 +45,8 @@ class DefaultReplacementStrategy:
         Returns:
             Generic replacement string
         """
-        label = entity['label'].lower()
-        original_text = entity['text']
+        label = entity["label"].lower()
+        original_text = entity["text"]
 
         try:
             # Try specialized pattern if available
@@ -66,7 +67,7 @@ class DefaultReplacementStrategy:
         # Preserve general structure
         if original_text.isdigit():
             # Replace numbers with random numbers
-            return ''.join(random.choices(string.digits, k=text_len))
+            return "".join(random.choices(string.digits, k=text_len))
         elif original_text.isalpha():
             # Replace letters with random letters, preserving case pattern
             result = []
@@ -77,7 +78,7 @@ class DefaultReplacementStrategy:
                     result.append(random.choice(string.ascii_lowercase))
                 else:
                     result.append(char)
-            return ''.join(result)
+            return "".join(result)
         elif any(char.isalnum() for char in original_text):
             # Mixed alphanumeric - replace alphanumeric chars
             result = []
@@ -91,15 +92,15 @@ class DefaultReplacementStrategy:
                         result.append(random.choice(string.ascii_lowercase))
                 else:
                     result.append(char)  # Keep special chars
-            return ''.join(result)
+            return "".join(result)
         else:
             # Fallback to labeled placeholder
             return f"[{label.upper()}_REDACTED]"
 
     def _generate_email(self) -> str:
         """Generate a fake email address."""
-        domains = ['example.com', 'test.org', 'sample.net', 'demo.co']
-        username = ''.join(random.choices(string.ascii_lowercase, k=random.randint(5, 10)))
+        domains = ["example.com", "test.org", "sample.net", "demo.co"]
+        username = "".join(random.choices(string.ascii_lowercase, k=random.randint(5, 10)))
         domain = random.choice(domains)
         return f"{username}@{domain}"
 
@@ -107,7 +108,7 @@ class DefaultReplacementStrategy:
         """Generate a fake phone number."""
         # US format
         area_code = random.randint(200, 999)
-        exchange = random.randint(200, 999)  
+        exchange = random.randint(200, 999)
         number = random.randint(1000, 9999)
         return f"({area_code}) {exchange}-{number}"
 
@@ -117,8 +118,8 @@ class DefaultReplacementStrategy:
 
     def _generate_id(self) -> str:
         """Generate a generic ID."""
-        letters = ''.join(random.choices(string.ascii_uppercase, k=2))
-        numbers = ''.join(random.choices(string.digits, k=6))
+        letters = "".join(random.choices(string.ascii_uppercase, k=2))
+        numbers = "".join(random.choices(string.digits, k=6))
         return f"{letters}{numbers}"
 
     def _generate_number(self) -> str:
@@ -127,11 +128,11 @@ class DefaultReplacementStrategy:
 
     def _generate_code(self) -> str:
         """Generate a random code."""
-        return ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+        return "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
 
     def _generate_username(self) -> str:
-        """Generate a random username.""" 
-        prefixes = ['user', 'demo', 'test', 'sample']
+        """Generate a random username."""
+        prefixes = ["user", "demo", "test", "sample"]
         prefix = random.choice(prefixes)
         suffix = random.randint(100, 9999)
         return f"{prefix}{suffix}"

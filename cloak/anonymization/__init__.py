@@ -10,7 +10,4 @@ Provides:
 from .redactor import EntityRedactor, RedactionDetail
 from .replacer import EntityReplacer, ReplacementDetail
 
-__all__ = [
-    'EntityRedactor', 'RedactionDetail',
-    'EntityReplacer', 'ReplacementDetail'
-]
+__all__ = ["EntityRedactor", "RedactionDetail", "EntityReplacer", "ReplacementDetail"]

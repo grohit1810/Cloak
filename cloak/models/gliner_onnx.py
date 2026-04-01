@@ -4,14 +4,15 @@ Placeholder for GLiNER ONNX Model Integration
 This is a placeholder for the actual GLiNER ONNX model implementation.
 In a real deployment, this would interface with the actual GLiNER model files.
 
-Author: G Rohit  
+Author: G Rohit
 Version: 1.0.0
 """
 
 import logging
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
+
 
 class GLiNERONNXModel:
     """
@@ -39,10 +40,7 @@ class GLiNERONNXModel:
         logger.info(f"GLiNER placeholder initialized with {model_path}/{model_file}")
 
     def predict_entities(
-        self,
-        text: str,
-        labels: List[str],
-        threshold: float = 0.3
+        self, text: str, labels: List[str], threshold: float = 0.3
     ) -> List[Dict[str, Any]]:
         """
         Placeholder entity prediction method.
@@ -68,5 +66,5 @@ class GLiNERONNXModel:
             "model_file": self.model_file,
             "model_type": "GLiNER_ONNX_PLACEHOLDER",
             "status": "placeholder",
-            "loaded": self.model_loaded
+            "loaded": self.model_loaded,
         }

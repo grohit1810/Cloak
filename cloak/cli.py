@@ -3,7 +3,7 @@
 Cloak - Enhanced NER Extraction and Anonymization CLI
 
 Implements a comprehensive NER pipeline with advanced anonymization features:
-- Multi-pass extraction with masking and confidence thresholds  
+- Multi-pass extraction with masking and confidence thresholds
 - ThreadPool executor for parallel processing of large texts
 - Advanced caching with LRU strategy and detailed analytics
 - Entity merging for adjacent entities with intelligent scoring
@@ -22,17 +22,16 @@ import argparse
 import json
 import logging
 import sys
-from pathlib import Path
 
-from CloakExtraction import CloakExtraction
 import cloak
+from cloak.extraction_pipeline import CloakExtraction
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+
 
 def main():
     """
@@ -59,81 +58,110 @@ Examples:
   python main.py --model ./model --text "Text..." --overlap-strategy longest --verbose
 
   # Numbered redaction with custom format
-  python main.py --model ./model --text "John and Mary work here" --redact --placeholder "#{id}_{label}_HIDDEN"
-"""
+  python main.py --model ./model --text "John and Mary work here" \\
+    --redact --placeholder "#{id}_{label}_HIDDEN"
+""",
     )
 
     # Model configuration
-    parser.add_argument("--model", required=True,
-                       help="Path to the GLINER ONNX model directory")
-    parser.add_argument("--onnx-file", default="model.onnx",
-                       help="Name of the ONNX model file (default: model.onnx)")
+    parser.add_argument("--model", required=True, help="Path to the GLINER ONNX model directory")
+    parser.add_argument(
+        "--onnx-file",
+        default="model.onnx",
+        help="Name of the ONNX model file (default: model.onnx)",
+    )
 
     # Input configuration
-    parser.add_argument("--text",
-                       help="Input text to analyze")
-    parser.add_argument("--text-file",
-                       help="Path to text file to analyze")
-    parser.add_argument("--labels", nargs="+", default=["person", "date", "location", "organization"],
-                       help="Entity labels to detect")
+    parser.add_argument("--text", help="Input text to analyze")
+    parser.add_argument("--text-file", help="Path to text file to analyze")
+    parser.add_argument(
+        "--labels",
+        nargs="+",
+        default=["person", "date", "location", "organization"],
+        help="Entity labels to detect",
+    )
 
     # Processing mode
     mode_group = parser.add_mutually_exclusive_group()
-    mode_group.add_argument("--extract", action="store_true", default=True,
-                           help="Extract entities only (default)")
-    mode_group.add_argument("--redact", action="store_true",
-                           help="Redact entities with numbered placeholders")  
-    mode_group.add_argument("--replace", action="store_true",
-                           help="Replace entities with synthetic data")
+    mode_group.add_argument(
+        "--extract", action="store_true", default=True, help="Extract entities only (default)"
+    )
+    mode_group.add_argument(
+        "--redact", action="store_true", help="Redact entities with numbered placeholders"
+    )
+    mode_group.add_argument(
+        "--replace", action="store_true", help="Replace entities with synthetic data"
+    )
 
     # Redaction options
-    parser.add_argument("--placeholder", default="#{id}_{label}_REDACTED",
-                       help="Placeholder format for redaction (default: #{id}_{label}_REDACTED)")
-    parser.add_argument("--numbered", action="store_true", default=True,
-                       help="Use numbered redaction (default: True)")
+    parser.add_argument(
+        "--placeholder",
+        default="#{id}_{label}_REDACTED",
+        help="Placeholder format for redaction (default: #{id}_{label}_REDACTED)",
+    )
+    parser.add_argument(
+        "--numbered",
+        action="store_true",
+        default=True,
+        help="Use numbered redaction (default: True)",
+    )
 
-    # Replacement options  
-    parser.add_argument("--replacement-file",
-                       help="JSON file with custom replacement data")
-    parser.add_argument("--ensure-consistency", action="store_true", default=True,
-                       help="Ensure consistent replacements for identical entities")
+    # Replacement options
+    parser.add_argument("--replacement-file", help="JSON file with custom replacement data")
+    parser.add_argument(
+        "--ensure-consistency",
+        action="store_true",
+        default=True,
+        help="Ensure consistent replacements for identical entities",
+    )
 
     # Processing configuration
-    parser.add_argument("--max-passes", type=int, default=2,
-                       help="Maximum number of passes for multi-pass extraction (default: 2)")
-    parser.add_argument("--parallel", action="store_true",
-                       help="Force parallel processing")
-    parser.add_argument("--no-parallel", action="store_true",
-                       help="Force single-pass processing")
-    parser.add_argument("--chunk-size", type=int, default=600,
-                       help="Size of word chunks for parallel processing (default: 600)")
-    parser.add_argument("--workers", type=int, default=4,
-                       help="Maximum number of worker threads (default: 4)")
+    parser.add_argument(
+        "--max-passes",
+        type=int,
+        default=2,
+        help="Maximum number of passes for multi-pass extraction (default: 2)",
+    )
+    parser.add_argument("--parallel", action="store_true", help="Force parallel processing")
+    parser.add_argument("--no-parallel", action="store_true", help="Force single-pass processing")
+    parser.add_argument(
+        "--chunk-size",
+        type=int,
+        default=600,
+        help="Size of word chunks for parallel processing (default: 600)",
+    )
+    parser.add_argument(
+        "--workers", type=int, default=4, help="Maximum number of worker threads (default: 4)"
+    )
 
     # Feature configuration
-    parser.add_argument("--no-merge", action="store_true",
-                       help="Disable entity merging")
-    parser.add_argument("--no-cache", action="store_true",
-                       help="Disable caching")
-    parser.add_argument("--cache-size", type=int, default=128,
-                       help="Cache size (default: 128)")
+    parser.add_argument("--no-merge", action="store_true", help="Disable entity merging")
+    parser.add_argument("--no-cache", action="store_true", help="Disable caching")
+    parser.add_argument("--cache-size", type=int, default=128, help="Cache size (default: 128)")
 
-    # Validation configuration  
-    parser.add_argument("--min-confidence", type=float, default=0.3,
-                       help="Minimum confidence threshold for entities (default: 0.3)")
-    parser.add_argument("--no-validation", action="store_true",
-                       help="Disable entity position and text validation")
-    parser.add_argument("--overlap-strategy", default="highest_confidence",
-                       choices=["highest_confidence", "longest", "first"],
-                       help="Strategy for resolving overlapping entities (default: highest_confidence)")
+    # Validation configuration
+    parser.add_argument(
+        "--min-confidence",
+        type=float,
+        default=0.3,
+        help="Minimum confidence threshold for entities (default: 0.3)",
+    )
+    parser.add_argument(
+        "--no-validation", action="store_true", help="Disable entity position and text validation"
+    )
+    parser.add_argument(
+        "--overlap-strategy",
+        default="highest_confidence",
+        choices=["highest_confidence", "longest", "first"],
+        help="Strategy for resolving overlapping entities (default: highest_confidence)",
+    )
 
     # Output configuration
-    parser.add_argument("--output",
-                       help="Output file for results (JSON format)")
-    parser.add_argument("--verbose", "-v", action="store_true",
-                       help="Enable verbose output")
-    parser.add_argument("--system-info", action="store_true",
-                       help="Show system information and exit")
+    parser.add_argument("--output", help="Output file for results (JSON format)")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose output")
+    parser.add_argument(
+        "--system-info", action="store_true", help="Show system information and exit"
+    )
 
     args = parser.parse_args()
 
@@ -150,7 +178,7 @@ Examples:
             cache_size=args.cache_size,
             min_confidence=args.min_confidence,
             strict_validation=not args.no_validation,
-            overlap_strategy=args.overlap_strategy
+            overlap_strategy=args.overlap_strategy,
         )
         logger.info("Cloak system initialized successfully")
     except Exception as e:
@@ -168,7 +196,7 @@ Examples:
         text = args.text
     elif args.text_file:
         try:
-            with open(args.text_file, 'r', encoding='utf-8') as f:
+            with open(args.text_file, "r", encoding="utf-8") as f:
                 text = f.read()
         except Exception as e:
             logger.error(f"Error reading text file: {e}")
@@ -188,7 +216,7 @@ Examples:
     user_replacements = None
     if args.replacement_file:
         try:
-            with open(args.replacement_file, 'r', encoding='utf-8') as f:
+            with open(args.replacement_file, "r", encoding="utf-8") as f:
                 user_replacements = json.load(f)
         except Exception as e:
             logger.error(f"Error loading replacement file: {e}")
@@ -203,7 +231,7 @@ Examples:
                 labels=args.labels,
                 model_path=args.model,
                 numbered=args.numbered,
-                placeholder_format=args.placeholder
+                placeholder_format=args.placeholder,
             )
 
         elif args.replace:
@@ -214,14 +242,14 @@ Examples:
                     labels=args.labels,
                     user_replacements=user_replacements,
                     model_path=args.model,
-                    ensure_consistency=args.ensure_consistency
+                    ensure_consistency=args.ensure_consistency,
                 )
             else:
                 result = cloak.replace(
                     text=text,
                     labels=args.labels,
                     model_path=args.model,
-                    ensure_consistency=args.ensure_consistency
+                    ensure_consistency=args.ensure_consistency,
                 )
         else:
             logger.info("Running extraction mode")
@@ -237,24 +265,24 @@ Examples:
                 use_cache=not args.no_cache,
                 min_confidence=args.min_confidence,
                 enable_validation=not args.no_validation,
-                resolve_overlaps=True
+                resolve_overlaps=True,
             )
 
         # Output results
         if args.output:
-            with open(args.output, 'w', encoding='utf-8') as f:
+            with open(args.output, "w", encoding="utf-8") as f:
                 json.dump(result, f, indent=2, ensure_ascii=False, default=str)
             logger.info(f"Results saved to {args.output}")
         else:
             # Print results to console
-            print("\n" + "="*80)
+            print("\n" + "=" * 80)
             print("CLOAK PROCESSING RESULTS")
-            print("="*80)
+            print("=" * 80)
 
-            if 'anonymized_text' in result:
-                print(f"\nAnonymized Text:")
+            if "anonymized_text" in result:
+                print("\nAnonymized Text:")
                 print("-" * 40)
-                print(result['anonymized_text'])
+                print(result["anonymized_text"])
                 print()
 
             entities = result.get("entities", [])
@@ -262,13 +290,21 @@ Examples:
                 print(f"\nFound {len(entities)} entities:")
                 print("-" * 40)
                 for i, entity in enumerate(entities, 1):
-                    print(f"{i:2d}. {entity['label']:<15} | {entity['text']:<30} | Score: {entity['score']:.3f} | Pos: {entity['start']}-{entity['end']}")
+                    label = entity["label"]
+                    text = entity["text"]
+                    score = entity["score"]
+                    start = entity["start"]
+                    end = entity["end"]
+                    print(
+                        f"{i:2d}. {label:<15} | {text:<30}"
+                        f" | Score: {score:.3f} | Pos: {start}-{end}"
+                    )
             else:
                 print("\nNo entities found.")
 
             # Show processing information
-            if 'processing_info' in result:
-                print(f"\nProcessing Information:")
+            if "processing_info" in result:
+                print("\nProcessing Information:")
                 print("-" * 40)
                 info = result["processing_info"]
                 for key, value in info.items():
@@ -276,37 +312,49 @@ Examples:
                         print(f"  {key}: {value}")
 
             # Show validation statistics
-            if args.verbose and 'processing_info' in result and 'validation_stats' in result['processing_info']:
-                v_stats = result['processing_info']['validation_stats']
+            if (
+                args.verbose
+                and "processing_info" in result
+                and "validation_stats" in result["processing_info"]
+            ):
+                v_stats = result["processing_info"]["validation_stats"]
                 if v_stats:
-                    print(f"\nValidation Statistics:")
+                    print("\nValidation Statistics:")
                     print("-" * 40)
                     if "validation_success_rate" in v_stats:
                         print(f"  Success rate: {v_stats['validation_success_rate']:.1%}")
                     for key, value in v_stats.items():
-                        if key.endswith("_filtered") or key.endswith("_invalid") or key.endswith("_mismatch"):
+                        if (
+                            key.endswith("_filtered")
+                            or key.endswith("_invalid")
+                            or key.endswith("_mismatch")
+                        ):
                             print(f"  {key}: {value}")
 
             # Show cache statistics if verbose
-            if args.verbose and 'processing_info' in result and "cache_stats" in result['processing_info']:
-                print(f"\nCache Statistics:")
+            if (
+                args.verbose
+                and "processing_info" in result
+                and "cache_stats" in result["processing_info"]
+            ):
+                print("\nCache Statistics:")
                 print("-" * 40)
-                cache_stats = result['processing_info']['cache_stats']
+                cache_stats = result["processing_info"]["cache_stats"]
                 for key, value in cache_stats.items():
-                    if key != 'manager_stats':
+                    if key != "manager_stats":
                         print(f"  {key}: {value}")
 
             # Show redaction/replacement info
-            if 'redaction_info' in result:
-                print(f"\nRedaction Information:")
-                print("-" * 40)  
-                for key, value in result['redaction_info'].items():
+            if "redaction_info" in result:
+                print("\nRedaction Information:")
+                print("-" * 40)
+                for key, value in result["redaction_info"].items():
                     print(f"  {key}: {value}")
 
-            if 'replacement_info' in result:
-                print(f"\nReplacement Information:")
+            if "replacement_info" in result:
+                print("\nReplacement Information:")
                 print("-" * 40)
-                for key, value in result['replacement_info'].items():
+                for key, value in result["replacement_info"].items():
                     print(f"  {key}: {value}")
 
         return 0
@@ -315,8 +363,10 @@ Examples:
         logger.error(f"Error during processing: {e}")
         if args.verbose:
             import traceback
+
             traceback.print_exc()
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

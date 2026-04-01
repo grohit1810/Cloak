@@ -9,9 +9,10 @@ Version: 1.0.0
 """
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
+
 
 class FakerReplacementStrategy:
     """Replacement strategy using Faker for realistic synthetic data."""
@@ -25,27 +26,39 @@ class FakerReplacementStrategy:
         """
         self.faker = faker_instance
         self.supported_labels = {
-            'person', 'name', 'first_name', 'last_name',
-            'email', 'phone', 'address', 'company', 'organization',
-            'city', 'state', 'country', 'age', 'job', 'profession'
+            "person",
+            "name",
+            "first_name",
+            "last_name",
+            "email",
+            "phone",
+            "address",
+            "company",
+            "organization",
+            "city",
+            "state",
+            "country",
+            "age",
+            "job",
+            "profession",
         }
 
         # Label to Faker method mapping
         self.method_mapping = {
-            'person': 'name',
-            'name': 'name',
-            'first_name': 'first_name',
-            'last_name': 'last_name',
-            'email': 'email',
-            'phone': 'phone_number',
-            'address': 'address',
-            'company': 'company',
-            'organization': 'company',
-            'city': 'city',
-            'state': 'state',
-            'age': lambda: str(self.faker.random_int(min=18, max=80)),
-            'job': 'job',
-            'profession': 'job'
+            "person": "name",
+            "name": "name",
+            "first_name": "first_name",
+            "last_name": "last_name",
+            "email": "email",
+            "phone": "phone_number",
+            "address": "address",
+            "company": "company",
+            "organization": "company",
+            "city": "city",
+            "state": "state",
+            "age": lambda: str(self.faker.random_int(min=18, max=80)),
+            "job": "job",
+            "profession": "job",
         }
 
     def can_handle(self, label: str) -> bool:
@@ -65,8 +78,8 @@ class FakerReplacementStrategy:
         if not self.faker:
             return None
 
-        label = entity['label'].lower()
-        original_text = entity['text']
+        label = entity["label"].lower()
+        original_text = entity["text"]
 
         try:
             # Get the appropriate Faker method

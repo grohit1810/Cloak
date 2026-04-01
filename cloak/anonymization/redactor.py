@@ -3,7 +3,7 @@ Entity Redactor - Numbered Redaction System
 
 Provides enterprise-grade entity redaction with intelligent numbering:
 - Consistent numbering across identical entities
-- Configurable placeholder formats  
+- Configurable placeholder formats
 - Re-identification mapping for potential reversibility
 - Support for various redaction strategies
 
@@ -11,17 +11,18 @@ Author: G Rohit
 Version: 1.0.0
 """
 
-import random
 import logging
-from typing import List, Dict, Any, Optional, Tuple
 from collections import defaultdict
 from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class RedactionDetail:
     """Details about a single entity redaction."""
+
     label: str
     original: str
     placeholder: str
@@ -29,6 +30,7 @@ class RedactionDetail:
     end: int
     score: float
     redaction_id: str
+
 
 class EntityRedactor:
     """
@@ -63,7 +65,7 @@ class EntityRedactor:
         numbered: bool = True,
         placeholder_format: Optional[str] = None,
         preserve_case: bool = False,
-        consistent_ids: bool = True
+        consistent_ids: bool = True,
     ) -> Dict[str, Any]:
         """
         Redact entities in text with numbered placeholders.
@@ -85,10 +87,10 @@ class EntityRedactor:
         """
         if not entities:
             return {
-                'anonymized_text': text,
-                'replacements': [],
-                'redaction_info': {'entities_processed': 0, 'redactions_applied': 0},
-                're_identification_map': {}
+                "anonymized_text": text,
+                "replacements": [],
+                "redaction_info": {"entities_processed": 0, "redactions_applied": 0},
+                "re_identification_map": {},
             }
 
         format_str = placeholder_format or self.default_format
@@ -96,7 +98,7 @@ class EntityRedactor:
         logger.info(f"Using format: {format_str}")
 
         # Sort entities by start position (reverse order for safe replacement)
-        sorted_entities = sorted(entities, key=lambda x: x['start'], reverse=True)
+        sorted_entities = sorted(entities, key=lambda x: x["start"], reverse=True)
 
         redacted_text = text
         redaction_details = []
@@ -109,24 +111,22 @@ class EntityRedactor:
         # Process entities in reverse order to preserve indices
         for entity in sorted_entities:
             try:
-                label = entity['label'].upper()
-                original_text = entity['text']
-                start_pos = entity['start']
-                end_pos = entity['end']
-                score = entity.get('score', 1.0)
+                label = entity["label"].upper()
+                original_text = entity["text"]
+                start_pos = entity["start"]
+                end_pos = entity["end"]
+                score = entity.get("score", 1.0)
 
                 # Generate placeholder
                 if numbered:
                     if consistent_ids:
-                        entity_key = (entity['label'], original_text)
+                        entity_key = (entity["label"], original_text)
                         redaction_id = entity_to_id[entity_key]
                     else:
                         redaction_id = self._generate_unique_id(label)
 
                     placeholder = format_str.format(
-                        id=redaction_id,
-                        label=label,
-                        count=redaction_id
+                        id=redaction_id, label=label, count=redaction_id
                     )
                 else:
                     placeholder = f"{label}_REDACTED"
@@ -143,7 +143,7 @@ class EntityRedactor:
                     start=start_pos,
                     end=end_pos,
                     score=score,
-                    redaction_id=redaction_id
+                    redaction_id=redaction_id,
                 )
                 redaction_details.append(detail)
 
@@ -160,17 +160,17 @@ class EntityRedactor:
         redaction_details.sort(key=lambda x: x.start)
 
         result = {
-            'anonymized_text': redacted_text,
-            'replacements': redaction_details,
-            'redaction_info': {
-                'entities_processed': len(entities),
-                'redactions_applied': len(redaction_details),
-                'format_used': format_str,
-                'numbered_redaction': numbered,
-                'consistent_ids': consistent_ids,
-                'unique_entities': len(set((d.label, d.original) for d in redaction_details))
+            "anonymized_text": redacted_text,
+            "replacements": redaction_details,
+            "redaction_info": {
+                "entities_processed": len(entities),
+                "redactions_applied": len(redaction_details),
+                "format_used": format_str,
+                "numbered_redaction": numbered,
+                "consistent_ids": consistent_ids,
+                "unique_entities": len(set((d.label, d.original) for d in redaction_details)),
             },
-            're_identification_map': re_identification_map
+            "re_identification_map": re_identification_map,
         }
 
         logger.info(f"Redaction complete: {len(redaction_details)} redactions applied")
@@ -181,8 +181,8 @@ class EntityRedactor:
         entity_to_id = {}
 
         for entity in entities:
-            label = entity['label']
-            text = entity['text']
+            label = entity["label"]
+            text = entity["text"]
             entity_key = (label, text)
 
             if entity_key not in entity_to_id:
@@ -205,10 +205,7 @@ class EntityRedactor:
         return str(candidate_id)
 
     def batch_redact(
-        self,
-        texts: List[str],
-        all_entities: List[List[Dict[str, Any]]],
-        **kwargs
+        self, texts: List[str], all_entities: List[List[Dict[str, Any]]], **kwargs
     ) -> List[Dict[str, Any]]:
         """
         Redact multiple texts while maintaining ID consistency across all texts.
@@ -230,7 +227,7 @@ class EntityRedactor:
         all_entity_keys = set()
         for entities in all_entities:
             for entity in entities:
-                all_entity_keys.add((entity['label'], entity['text']))
+                all_entity_keys.add((entity["label"], entity["text"]))
 
         # Pre-generate IDs for all unique entities
         global_entity_map = {}
@@ -251,7 +248,7 @@ class EntityRedactor:
             # Restore original map
             self.entity_id_map = old_map
 
-            logger.debug(f"Completed redaction for text {i+1}/{len(texts)}")
+            logger.debug(f"Completed redaction for text {i + 1}/{len(texts)}")
 
         logger.info("Batch redaction complete")
         return results
@@ -271,13 +268,13 @@ class EntityRedactor:
         label_stats = {}
         for label, used_ids in self.used_ids_per_label.items():
             label_stats[label] = {
-                'unique_entities': len(used_ids),
-                'max_id_used': max(map(int, used_ids)) if used_ids else 0
+                "unique_entities": len(used_ids),
+                "max_id_used": max(map(int, used_ids)) if used_ids else 0,
             }
 
         return {
-            'total_unique_entities': total_unique_entities,
-            'labels_processed': labels_processed,
-            'label_statistics': label_stats,
-            'default_format': self.default_format
+            "total_unique_entities": total_unique_entities,
+            "labels_processed": labels_processed,
+            "label_statistics": label_stats,
+            "default_format": self.default_format,
         }

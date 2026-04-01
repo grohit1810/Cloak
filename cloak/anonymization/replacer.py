@@ -7,33 +7,36 @@ Provides enterprise-grade entity replacement with:
 - Custom replacement strategies per entity type
 - Fallback mechanisms for unknown entity types
 
-Author: G Rohit  
+Author: G Rohit
 Version: 1.0.0
 """
 
-import random
 import logging
-from typing import List, Dict, Any, Optional, Union
-from dataclasses import dataclass
+import random
 from collections import defaultdict
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Union
 
 try:
     from faker import Faker
+
     FAKER_AVAILABLE = True
 except ImportError:
     FAKER_AVAILABLE = False
     logging.warning("Faker not available. Install with: pip install faker")
 
-from .strategies.faker_strategy import FakerReplacementStrategy
-from .strategies.country_strategy import CountryReplacementStrategy  
+from .strategies.country_strategy import CountryReplacementStrategy
 from .strategies.date_strategy import DateReplacementStrategy
 from .strategies.default_strategy import DefaultReplacementStrategy
+from .strategies.faker_strategy import FakerReplacementStrategy
 
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class ReplacementDetail:
     """Details about a single entity replacement."""
+
     label: str
     original: str
     replacement: str
@@ -42,19 +45,20 @@ class ReplacementDetail:
     score: float
     strategy_used: str
 
+
 class EntityReplacer:
     """
     Advanced entity replacer with multiple strategies and consistency tracking.
 
     Features:
     - Faker integration for realistic synthetic data
-    - Consistent replacement for identical entities  
+    - Consistent replacement for identical entities
     - Pluggable replacement strategies
     - Custom user data support
     - Fallback mechanisms
     """
 
-    def __init__(self, locale: str = 'en_US', ensure_consistency: bool = True):
+    def __init__(self, locale: str = "en_US", ensure_consistency: bool = True):
         """
         Initialize the entity replacer.
 
@@ -82,25 +86,25 @@ class EntityReplacer:
     def _init_strategies(self):
         """Initialize replacement strategies."""
         self.strategies = {
-            'faker': FakerReplacementStrategy(self.faker) if self.faker else None,
-            'country': CountryReplacementStrategy(),
-            'date': DateReplacementStrategy(self.faker),
-            'default': DefaultReplacementStrategy()
+            "faker": FakerReplacementStrategy(self.faker) if self.faker else None,
+            "country": CountryReplacementStrategy(),
+            "date": DateReplacementStrategy(self.faker),
+            "default": DefaultReplacementStrategy(),
         }
 
         # Entity type to strategy mapping
         self.strategy_mapping = {
-            'person': ['faker', 'default'],
-            'location': ['country', 'faker', 'default'], 
-            'date': ['date', 'faker', 'default'],
-            'organization': ['faker', 'default'],
-            'company': ['faker', 'default'],
-            'email': ['faker', 'default'],
-            'phone': ['faker', 'default'],
-            'address': ['faker', 'default'],
-            'age': ['faker', 'default'],
-            'nationality': ['country', 'default'],
-            'country': ['country', 'default']
+            "person": ["faker", "default"],
+            "location": ["country", "faker", "default"],
+            "date": ["date", "faker", "default"],
+            "organization": ["faker", "default"],
+            "company": ["faker", "default"],
+            "email": ["faker", "default"],
+            "phone": ["faker", "default"],
+            "address": ["faker", "default"],
+            "age": ["faker", "default"],
+            "nationality": ["country", "default"],
+            "country": ["country", "default"],
         }
 
     def replace(
@@ -108,14 +112,14 @@ class EntityReplacer:
         text: str,
         entities: List[Dict[str, Any]],
         ensure_consistency: Optional[bool] = None,
-        custom_strategies: Optional[Dict[str, str]] = None
+        custom_strategies: Optional[Dict[str, str]] = None,
     ) -> Dict[str, Any]:
         """
         Replace entities with synthetic alternatives.
 
         Args:
             text: Original text to process
-            entities: List of entity dictionaries 
+            entities: List of entity dictionaries
             ensure_consistency: Override default consistency behavior
             custom_strategies: Custom strategy mapping for entity types
 
@@ -124,19 +128,21 @@ class EntityReplacer:
         """
         if not entities:
             return {
-                'anonymized_text': text,
-                'replacements': [],
-                'replacement_info': {'entities_processed': 0, 'replacements_applied': 0}
+                "anonymized_text": text,
+                "replacements": [],
+                "replacement_info": {"entities_processed": 0, "replacements_applied": 0},
             }
 
-        consistency = ensure_consistency if ensure_consistency is not None else self.ensure_consistency
+        consistency = (
+            ensure_consistency if ensure_consistency is not None else self.ensure_consistency
+        )
         strategies = custom_strategies or {}
 
         logger.info(f"Starting replacement of {len(entities)} entities")
         logger.info(f"Consistency enabled: {consistency}")
 
         # Sort entities by start position (reverse order for safe replacement)
-        sorted_entities = sorted(entities, key=lambda x: x['start'], reverse=True)
+        sorted_entities = sorted(entities, key=lambda x: x["start"], reverse=True)
 
         replaced_text = text
         replacement_details = []
@@ -145,22 +151,22 @@ class EntityReplacer:
         # Process entities
         for entity in sorted_entities:
             try:
-                label = entity['label'].lower()
-                original_text = entity['text']
-                start_pos = entity['start']
-                end_pos = entity['end']
-                score = entity.get('score', 1.0)
+                label = entity["label"].lower()
+                original_text = entity["text"]
+                start_pos = entity["start"]
+                end_pos = entity["end"]
+                score = entity.get("score", 1.0)
 
                 # Get replacement
                 replacement, strategy_used = self._get_replacement(
-                    entity=entity,
-                    consistency=consistency,
-                    custom_strategy=strategies.get(label)
+                    entity=entity, consistency=consistency, custom_strategy=strategies.get(label)
                 )
 
-                # Apply replacement  
+                # Apply replacement
                 if replacement and replacement != original_text:
-                    replaced_text = replaced_text[:start_pos] + replacement + replaced_text[end_pos:]
+                    replaced_text = (
+                        replaced_text[:start_pos] + replacement + replaced_text[end_pos:]
+                    )
 
                     # Create replacement detail
                     detail = ReplacementDetail(
@@ -170,12 +176,14 @@ class EntityReplacer:
                         start=start_pos,
                         end=end_pos,
                         score=score,
-                        strategy_used=strategy_used
+                        strategy_used=strategy_used,
                     )
                     replacement_details.append(detail)
                     replacement_map[original_text] = replacement
 
-                    logger.debug(f"Replaced '{original_text}' -> '{replacement}' using {strategy_used}")
+                    logger.debug(
+                        f"Replaced '{original_text}' -> '{replacement}' using {strategy_used}"
+                    )
                 else:
                     logger.debug(f"No replacement for '{original_text}' (label: {label})")
 
@@ -192,16 +200,16 @@ class EntityReplacer:
             strategies_used[detail.strategy_used] += 1
 
         result = {
-            'anonymized_text': replaced_text,
-            'replacements': replacement_details,
-            'replacement_info': {
-                'entities_processed': len(entities),
-                'replacements_applied': len(replacement_details),
-                'consistency_enabled': consistency,
-                'strategies_used': dict(strategies_used),
-                'unique_replacements': len(set(d.replacement for d in replacement_details))
+            "anonymized_text": replaced_text,
+            "replacements": replacement_details,
+            "replacement_info": {
+                "entities_processed": len(entities),
+                "replacements_applied": len(replacement_details),
+                "consistency_enabled": consistency,
+                "strategies_used": dict(strategies_used),
+                "unique_replacements": len(set(d.replacement for d in replacement_details)),
             },
-            'replacement_map': replacement_map
+            "replacement_map": replacement_map,
         }
 
         logger.info(f"Replacement complete: {len(replacement_details)} replacements applied")
@@ -212,7 +220,7 @@ class EntityReplacer:
         text: str,
         entities: List[Dict[str, Any]],
         user_replacements: Dict[str, Union[str, List[str]]],
-        ensure_consistency: Optional[bool] = None
+        ensure_consistency: Optional[bool] = None,
     ) -> Dict[str, Any]:
         """
         Replace entities with user-provided data.
@@ -228,18 +236,20 @@ class EntityReplacer:
         """
         if not entities or not user_replacements:
             return {
-                'anonymized_text': text,
-                'replacements': [],
-                'replacement_info': {'entities_processed': 0, 'replacements_applied': 0}
+                "anonymized_text": text,
+                "replacements": [],
+                "replacement_info": {"entities_processed": 0, "replacements_applied": 0},
             }
 
-        consistency = ensure_consistency if ensure_consistency is not None else self.ensure_consistency
+        consistency = (
+            ensure_consistency if ensure_consistency is not None else self.ensure_consistency
+        )
 
         logger.info(f"Starting user data replacement of {len(entities)} entities")
         logger.info(f"User replacements for labels: {list(user_replacements.keys())}")
 
         # Sort entities by start position (reverse order)
-        sorted_entities = sorted(entities, key=lambda x: x['start'], reverse=True)
+        sorted_entities = sorted(entities, key=lambda x: x["start"], reverse=True)
 
         replaced_text = text
         replacement_details = []
@@ -251,11 +261,11 @@ class EntityReplacer:
 
         for entity in sorted_entities:
             try:
-                label = entity['label'].lower()
-                original_text = entity['text']
-                start_pos = entity['start']
-                end_pos = entity['end']
-                score = entity.get('score', 1.0)
+                label = entity["label"].lower()
+                original_text = entity["text"]
+                start_pos = entity["start"]
+                end_pos = entity["end"]
+                score = entity.get("score", 1.0)
 
                 # Get user replacement for this label
                 if label in user_replacements:
@@ -274,7 +284,9 @@ class EntityReplacer:
 
                     # Apply replacement
                     if replacement:
-                        replaced_text = replaced_text[:start_pos] + replacement + replaced_text[end_pos:]
+                        replaced_text = (
+                            replaced_text[:start_pos] + replacement + replaced_text[end_pos:]
+                        )
 
                         detail = ReplacementDetail(
                             label=label,
@@ -283,7 +295,7 @@ class EntityReplacer:
                             start=start_pos,
                             end=end_pos,
                             score=score,
-                            strategy_used='user_data'
+                            strategy_used="user_data",
                         )
                         replacement_details.append(detail)
                         replacement_map[original_text] = replacement
@@ -298,30 +310,29 @@ class EntityReplacer:
         replacement_details.sort(key=lambda x: x.start)
 
         result = {
-            'anonymized_text': replaced_text,
-            'replacements': replacement_details,
-            'replacement_info': {
-                'entities_processed': len(entities),
-                'replacements_applied': len(replacement_details),
-                'consistency_enabled': consistency,
-                'user_data_labels': list(user_replacements.keys()),
-                'strategy_used': 'user_data'
+            "anonymized_text": replaced_text,
+            "replacements": replacement_details,
+            "replacement_info": {
+                "entities_processed": len(entities),
+                "replacements_applied": len(replacement_details),
+                "consistency_enabled": consistency,
+                "user_data_labels": list(user_replacements.keys()),
+                "strategy_used": "user_data",
             },
-            'replacement_map': replacement_map
+            "replacement_map": replacement_map,
         }
 
-        logger.info(f"User data replacement complete: {len(replacement_details)} replacements applied")
+        logger.info(
+            f"User data replacement complete: {len(replacement_details)} replacements applied"
+        )
         return result
 
     def _get_replacement(
-        self,
-        entity: Dict[str, Any],
-        consistency: bool,
-        custom_strategy: Optional[str] = None
+        self, entity: Dict[str, Any], consistency: bool, custom_strategy: Optional[str] = None
     ) -> tuple[str, str]:
         """Get replacement for an entity using appropriate strategy."""
-        label = entity['label'].lower()
-        original_text = entity['text']
+        label = entity["label"].lower()
+        original_text = entity["text"]
 
         # Check consistency cache first
         if consistency:
@@ -334,7 +345,7 @@ class EntityReplacer:
         if custom_strategy:
             strategies_to_try = [custom_strategy]
         else:
-            strategies_to_try = self.strategy_mapping.get(label, ['faker', 'default'])
+            strategies_to_try = self.strategy_mapping.get(label, ["faker", "default"])
 
         # Try strategies in order
         for strategy_name in strategies_to_try:
@@ -353,13 +364,13 @@ class EntityReplacer:
 
         # Fallback to default strategy
         try:
-            replacement = self.strategies['default'].get_replacement(entity)
+            replacement = self.strategies["default"].get_replacement(entity)
             if consistency:
-                self.replacement_cache[cache_key] = (replacement, 'default')
-            return replacement, 'default'
+                self.replacement_cache[cache_key] = (replacement, "default")
+            return replacement, "default"
         except Exception as e:
             logger.error(f"Default strategy failed for {entity}: {str(e)}")
-            return original_text, 'none'
+            return original_text, "none"
 
     def _select_user_replacement(self, user_data: Union[str, List[str]]) -> str:
         """Select a replacement from user data."""
@@ -385,10 +396,10 @@ class EntityReplacer:
             strategy_distribution[strategy] += 1
 
         return {
-            'cache_size': cache_size,
-            'consistency_enabled': self.ensure_consistency,
-            'faker_available': FAKER_AVAILABLE,
-            'locale': self.locale,
-            'cached_strategies': dict(strategy_distribution),
-            'available_strategies': list(self.strategies.keys())
+            "cache_size": cache_size,
+            "consistency_enabled": self.ensure_consistency,
+            "faker_available": FAKER_AVAILABLE,
+            "locale": self.locale,
+            "cached_strategies": dict(strategy_distribution),
+            "available_strategies": list(self.strategies.keys()),
         }
