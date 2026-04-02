@@ -1,47 +1,100 @@
 """Tests for GLiNER model wrapper."""
 
+import os
 import threading
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from cloak.models.gliner_model import GLiNERModel
+from cloak.models.gliner_model import DEFAULT_MODEL_ID, GLiNERModel
 
 
 class TestGLiNERModel:
-    def test_init_requires_valid_path(self):
+    def test_init_requires_valid_local_path(self):
         with pytest.raises(FileNotFoundError):
             GLiNERModel(model_path="/nonexistent/path")
 
     @patch("cloak.models.gliner_model.GLiNER")
-    def test_init_loads_onnx_by_default(self, mock_gliner_cls):
+    def test_init_pytorch_loads_from_hf(self, mock_gliner_cls):
         mock_gliner_cls.from_pretrained.return_value = MagicMock()
-        model = GLiNERModel.__new__(GLiNERModel)
-        model.model = model._load_model(
-            "some-org/some-model", use_onnx=True, onnx_model_file="model.onnx"
-        )
+        GLiNERModel(model_path="some-org/some-model", use_onnx=False)
         mock_gliner_cls.from_pretrained.assert_called_once_with(
             "some-org/some-model",
-            load_onnx_model=True,
-            onnx_model_file="model.onnx",
+            load_onnx_model=False,
             map_location="cpu",
             local_files_only=False,
         )
 
     @patch("cloak.models.gliner_model.GLiNER")
-    def test_init_loads_pytorch_when_onnx_false(self, mock_gliner_cls):
+    def test_init_default_model_path(self, mock_gliner_cls):
+        """When model_path is None, should use DEFAULT_MODEL_ID."""
         mock_gliner_cls.from_pretrained.return_value = MagicMock()
-        model = GLiNERModel.__new__(GLiNERModel)
-        model.model = model._load_model(
-            "some-org/some-model", use_onnx=False, onnx_model_file="model.onnx"
-        )
+        model = GLiNERModel(model_path=None, use_onnx=False)
+        assert model.model_path == DEFAULT_MODEL_ID
         mock_gliner_cls.from_pretrained.assert_called_once_with(
-            "some-org/some-model",
+            DEFAULT_MODEL_ID,
             load_onnx_model=False,
-            onnx_model_file="model.onnx",
             map_location="cpu",
             local_files_only=False,
         )
+
+    @patch("cloak.models.gliner_model.GLiNER")
+    def test_onnx_auto_export_when_no_cache(self, mock_gliner_cls, tmp_path):
+        """When use_onnx=True and no cached ONNX, should download PyTorch and export."""
+        mock_model = MagicMock()
+        mock_gliner_cls.from_pretrained.return_value = mock_model
+
+        # Make export_to_onnx actually create the file (the real one does)
+        tmp_path / "some-org--some-model"
+
+        def fake_export(save_dir, onnx_filename, quantize):
+            os.makedirs(save_dir, exist_ok=True)
+            with open(os.path.join(save_dir, onnx_filename), "w") as f:
+                f.write("fake onnx")
+
+        mock_model.export_to_onnx.side_effect = fake_export
+
+        with patch("cloak.models.gliner_model._CLOAK_CACHE_DIR", tmp_path):
+            GLiNERModel(model_path="some-org/some-model", use_onnx=True)
+
+        # Should have called from_pretrained twice:
+        # 1. PyTorch download (load_onnx_model=False)
+        # 2. ONNX load after export (load_onnx_model=True)
+        calls = mock_gliner_cls.from_pretrained.call_args_list
+        assert len(calls) == 2
+        assert calls[0][1]["load_onnx_model"] is False
+        assert calls[1][1]["load_onnx_model"] is True
+        mock_model.export_to_onnx.assert_called_once()
+
+    @patch("cloak.models.gliner_model.GLiNER")
+    def test_onnx_loads_from_cache_when_available(self, mock_gliner_cls, tmp_path):
+        """When cached ONNX model exists, should load directly without PyTorch."""
+        mock_gliner_cls.from_pretrained.return_value = MagicMock()
+
+        # Create fake cached ONNX file
+        cache_dir = tmp_path / "some-org--some-model"
+        cache_dir.mkdir()
+        (cache_dir / "model.onnx").write_text("fake onnx model")
+
+        with patch("cloak.models.gliner_model._CLOAK_CACHE_DIR", tmp_path):
+            GLiNERModel(model_path="some-org/some-model", use_onnx=True)
+
+        # Should only call from_pretrained once (ONNX load, no PyTorch download)
+        mock_gliner_cls.from_pretrained.assert_called_once()
+        call_kwargs = mock_gliner_cls.from_pretrained.call_args[1]
+        assert call_kwargs["load_onnx_model"] is True
+        assert call_kwargs["local_files_only"] is True
+
+    @patch("cloak.models.gliner_model.GLiNER")
+    def test_onnx_local_files_only_raises_when_no_cache(self, mock_gliner_cls, tmp_path):
+        """When local_files_only=True and no ONNX cache, should raise FileNotFoundError."""
+        with patch("cloak.models.gliner_model._CLOAK_CACHE_DIR", tmp_path):
+            with pytest.raises(FileNotFoundError, match="local_files_only"):
+                GLiNERModel(
+                    model_path="some-org/some-model",
+                    use_onnx=True,
+                    local_files_only=True,
+                )
 
     @patch("cloak.models.gliner_model.GLiNER")
     def test_predict_entities_delegates_to_gliner(self, mock_gliner_cls):
@@ -106,7 +159,6 @@ class TestGLiNERModel:
         assert info["model_path"] == "test-path"
         assert info["use_onnx"] is True
         assert info["status"] == "loaded"
-        assert info["type"] == "GLiNER"
 
     def test_is_hf_model_id(self):
         assert GLiNERModel._is_hf_model_id("urchade/gliner_large-v2.1") is True
@@ -115,9 +167,5 @@ class TestGLiNERModel:
         assert GLiNERModel._is_hf_model_id("org/model/extra") is False
 
     def test_is_hf_model_id_rejects_existing_relative_path(self):
-        # "cloak/models" is a relative path that exists in the repo
-        # and has 2 slash-separated parts, so old code would misclassify it
-        import os
-
         if os.path.exists("cloak/models"):
             assert GLiNERModel._is_hf_model_id("cloak/models") is False

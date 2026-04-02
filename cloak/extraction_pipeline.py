@@ -13,7 +13,6 @@ Version: 1.0.0
 """
 
 import logging
-import re
 import time
 from typing import Any
 
@@ -86,16 +85,16 @@ class CloakExtraction:
         self.strict_validation = strict_validation
         self.overlap_strategy = overlap_strategy
 
-        # Initialize components only when model_path is provided
+        # Lazy initialization — components created on first use
+        self.base_extractor = None
+        self.extractor = None
+        self.parallel_processor = None
+        self.merger = None
+        self.validator = None
+
+        # Initialize eagerly if model_path is provided
         if self.model_path:
             self._initialize_components()
-        else:
-            # Lazy initialization - components will be created when needed
-            self.base_extractor = None
-            self.extractor = None
-            self.parallel_processor = None
-            self.merger = None
-            self.validator = None
 
         logger.info("Cloak extraction pipeline initialization complete")
 
@@ -107,7 +106,7 @@ class CloakExtraction:
             from .models.gliner_model import GLiNERModel
 
             gliner_model = GLiNERModel(
-                model_path=str(self.model_path),
+                model_path=self.model_path,
                 use_onnx=self.use_onnx,
                 onnx_model_file=self.onnx_model_file,
             )
@@ -140,13 +139,16 @@ class CloakExtraction:
             raise
 
     def _ensure_initialized(self, model_path: str | None = None):
-        """Ensure components are initialized."""
+        """Ensure components are initialized.
+
+        If no model_path was provided at init or here, GLiNERModel
+        will use the default model (urchade/gliner_large-v2.1).
+        """
         if self.base_extractor is not None:
             return  # Already fully initialized
         if model_path:
             self.model_path = model_path
-        if self.model_path is None:
-            raise ValueError("Model path must be provided either during init or method call")
+        # model_path=None is fine — GLiNERModel defaults to DEFAULT_MODEL_ID
         self._initialize_components()
 
     def extract_entities(
@@ -204,9 +206,11 @@ class CloakExtraction:
         start_time = time.time()
 
         try:
+            # Compute word count once — used for parallel decision and metadata
+            word_count = len(text.split())
+
             # Determine processing method
             if use_parallel is None:
-                word_count = len(re.findall(r"\S+", text))
                 use_parallel = word_count > chunk_size
 
             method_used = "parallel" if use_parallel else "single-pass"
@@ -218,7 +222,6 @@ class CloakExtraction:
                     text=text,
                     labels=labels,
                     chunk_size=chunk_size,
-                    max_workers=max_workers,
                     use_parallel=True,
                 )
             else:
@@ -284,7 +287,7 @@ class CloakExtraction:
                     if min_confidence is not None
                     else self.min_confidence,
                     "labels_processed": labels,
-                    "word_count": len(re.findall(r"\S+", text)),
+                    "word_count": word_count,
                     "auto_parallel_triggered": use_parallel if use_parallel is not None else None,
                 },
             }

@@ -39,15 +39,27 @@ class DateReplacementStrategy:
             "date_of_birth",
         }
 
-        # Date pattern matching
-        self.date_patterns = {
-            r"\b\d{1,2}/\d{1,2}/\d{4}\b": self._replace_mdy_format,  # MM/DD/YYYY
-            r"\b\d{1,2}-\d{1,2}-\d{4}\b": self._replace_mdy_dash_format,  # MM-DD-YYYY
-            r"\b\d{4}-\d{1,2}-\d{1,2}\b": self._replace_ymd_format,  # YYYY-MM-DD
-            r"\b\d{1,2}\s+\w+\s+\d{4}\b": self._replace_text_format,  # DD Month YYYY
-            r"\b\w+\s+\d{1,2},?\s+\d{4}\b": self._replace_month_text_format,  # Month DD, YYYY
-            r"\b\d{4}\b": self._replace_year_only,  # YYYY only
-        }
+        # Date pattern matching — pre-compiled for performance
+        self.date_patterns = [
+            # MM/DD/YYYY
+            (re.compile(r"\b\d{1,2}/\d{1,2}/\d{4}\b", re.IGNORECASE), self._replace_mdy_format),
+            # MM-DD-YYYY
+            (
+                re.compile(r"\b\d{1,2}-\d{1,2}-\d{4}\b", re.IGNORECASE),
+                self._replace_mdy_dash_format,
+            ),
+            # YYYY-MM-DD
+            (re.compile(r"\b\d{4}-\d{1,2}-\d{1,2}\b", re.IGNORECASE), self._replace_ymd_format),
+            # DD Month YYYY
+            (re.compile(r"\b\d{1,2}\s+\w+\s+\d{4}\b", re.IGNORECASE), self._replace_text_format),
+            # Month DD, YYYY
+            (
+                re.compile(r"\b\w+\s+\d{1,2},?\s+\d{4}\b", re.IGNORECASE),
+                self._replace_month_text_format,
+            ),
+            # YYYY only
+            (re.compile(r"\b\d{4}\b", re.IGNORECASE), self._replace_year_only),
+        ]
 
     def can_handle(self, label: str) -> bool:
         """Check if this strategy can handle the given label."""
@@ -68,8 +80,8 @@ class DateReplacementStrategy:
 
         try:
             # Try pattern-based replacement first
-            for pattern, replacement_func in self.date_patterns.items():
-                if re.match(pattern, original_text, re.IGNORECASE):
+            for pattern, replacement_func in self.date_patterns:
+                if pattern.match(original_text):
                     result = replacement_func(original_text)
                     if result:
                         return result

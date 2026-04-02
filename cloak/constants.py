@@ -12,3 +12,5 @@ FIRST_PASS_THRESHOLD: float = 0.5
 SUBSEQUENT_PASS_THRESHOLD: float = 0.30
 
 MAX_ENTITY_LENGTH: int = 200
+
+DEFAULT_MODEL_ID: str = "urchade/gliner_large-v2.1"

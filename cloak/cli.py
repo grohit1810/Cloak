@@ -23,7 +23,7 @@ import json
 import logging
 import sys
 
-from cloak.constants import DEFAULT_LABELS
+from cloak.constants import DEFAULT_LABELS, DEFAULT_MODEL_ID
 from cloak.extraction_pipeline import CloakExtraction
 
 # Configure logging
@@ -64,7 +64,12 @@ Examples:
     )
 
     # Model configuration
-    parser.add_argument("--model", required=True, help="Path to the GLINER ONNX model directory")
+    parser.add_argument(
+        "--model",
+        default=DEFAULT_MODEL_ID,
+        help="Path to GLINER model directory or HuggingFace model ID "
+        "(auto-downloaded and exported to ONNX on first run)",
+    )
     parser.add_argument(
         "--onnx-file",
         default="model.onnx",

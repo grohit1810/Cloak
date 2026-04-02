@@ -9,7 +9,7 @@ Provides:
 
 from .chunker import chunk_text, estimate_chunk_count, get_chunk_info, validate_chunks
 from .extractor import EntityExtractor
-from .parallel_processor import ParallelEntityProcessor, extract_entities_in_parallel
+from .parallel_processor import ParallelEntityProcessor
 
 __all__ = [
     "EntityExtractor",
@@ -18,5 +18,4 @@ __all__ = [
     "validate_chunks",
     "get_chunk_info",
     "ParallelEntityProcessor",
-    "extract_entities_in_parallel",
 ]

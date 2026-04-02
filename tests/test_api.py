@@ -88,6 +88,24 @@ class TestReplaceWithData:
             cloak.replace_with_data("Hello", model_path="/fake")
 
 
+class TestDefaultModel:
+    def setup_method(self):
+        _reset_global_instances()
+
+    def teardown_method(self):
+        _reset_global_instances()
+
+    @patch("cloak.api.CloakExtraction")
+    def test_extract_without_model_path_uses_default(self, mock_cls):
+        mock_instance = MagicMock()
+        mock_instance.extract_entities.return_value = {"entities": [], "processing_info": {}}
+        mock_cls.return_value = mock_instance
+        cloak.extract("test", labels=["person"])
+        mock_cls.assert_called_once()
+        # model_path should be None — GLiNERModel will use DEFAULT_MODEL_ID
+        assert mock_cls.call_args[1]["model_path"] is None
+
+
 class TestThreadSafety:
     def setup_method(self):
         _reset_global_instances()

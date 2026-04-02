@@ -159,14 +159,14 @@ class EntityReplacer:
         logger.info("Starting replacement of %d entities", len(entities))
         logger.info("Consistency enabled: %s", consistency)
 
-        # Sort entities by start position (reverse order for safe replacement)
-        sorted_entities = sorted(entities, key=lambda x: x["start"], reverse=True)
+        # Sort entities by start position ascending for forward-pass assembly
+        sorted_entities = sorted(entities, key=lambda x: x["start"])
 
-        replaced_text = text
         replacement_details = []
         replacement_map = {}
 
-        # Process entities
+        # First pass: compute replacements for each entity
+        replacements_to_apply: list[tuple[int, int, str]] = []
         for entity in sorted_entities:
             try:
                 label = entity["label"].lower()
@@ -180,11 +180,9 @@ class EntityReplacer:
                     entity=entity, consistency=consistency, custom_strategy=strategies.get(label)
                 )
 
-                # Apply replacement
+                # Track replacement
                 if replacement and replacement != original_text:
-                    replaced_text = (
-                        replaced_text[:start_pos] + replacement + replaced_text[end_pos:]
-                    )
+                    replacements_to_apply.append((start_pos, end_pos, replacement))
 
                     # Create replacement detail
                     detail = ReplacementDetail(
@@ -209,8 +207,15 @@ class EntityReplacer:
                 logger.error("Error replacing entity %s: %s", entity, str(e))
                 continue
 
-        # Sort replacement details by original position
-        replacement_details.sort(key=lambda x: x.start)
+        # Build output text in a single forward pass (O(N+L) instead of O(N*L))
+        segments: list[str] = []
+        prev_end = 0
+        for start_pos, end_pos, replacement in replacements_to_apply:
+            segments.append(text[prev_end:start_pos])
+            segments.append(replacement)
+            prev_end = end_pos
+        segments.append(text[prev_end:])
+        replaced_text = "".join(segments)
 
         # Calculate statistics
         strategies_used = defaultdict(int)
@@ -266,16 +271,17 @@ class EntityReplacer:
         logger.info("Starting user data replacement of %d entities", len(entities))
         logger.info("User replacements for labels: %s", list(user_replacements.keys()))
 
-        # Sort entities by start position (reverse order)
-        sorted_entities = sorted(entities, key=lambda x: x["start"], reverse=True)
+        # Sort entities by start position ascending for forward-pass assembly
+        sorted_entities = sorted(entities, key=lambda x: x["start"])
 
-        replaced_text = text
         replacement_details = []
         replacement_map = {}
 
         # Build consistency cache for user data
         consistency_cache: dict[tuple[str, str], str] = {}
 
+        # First pass: compute replacements for each entity
+        replacements_to_apply: list[tuple[int, int, str]] = []
         for entity in sorted_entities:
             try:
                 label = entity["label"].lower()
@@ -299,11 +305,9 @@ class EntityReplacer:
                     else:
                         replacement = self._select_user_replacement(user_data)
 
-                    # Apply replacement
+                    # Track replacement
                     if replacement:
-                        replaced_text = (
-                            replaced_text[:start_pos] + replacement + replaced_text[end_pos:]
-                        )
+                        replacements_to_apply.append((start_pos, end_pos, replacement))
 
                         detail = ReplacementDetail(
                             label=label,
@@ -323,8 +327,15 @@ class EntityReplacer:
                 logger.error("Error in user replacement for entity %s: %s", entity, str(e))
                 continue
 
-        # Sort by original position
-        replacement_details.sort(key=lambda x: x.start)
+        # Build output text in a single forward pass (O(N+L) instead of O(N*L))
+        segments: list[str] = []
+        prev_end = 0
+        for start_pos, end_pos, replacement in replacements_to_apply:
+            segments.append(text[prev_end:start_pos])
+            segments.append(replacement)
+            prev_end = end_pos
+        segments.append(text[prev_end:])
+        replaced_text = "".join(segments)
 
         result = {
             "anonymized_text": replaced_text,
