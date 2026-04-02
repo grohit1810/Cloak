@@ -65,6 +65,7 @@ class EntityRedactor:
         self.default_format = default_format
         self.entity_id_map = {}  # Maps (label, text) -> unique_id
         self.used_ids_per_label = defaultdict(set)  # Tracks used IDs per label
+        self._next_id_per_label: dict[str, int] = defaultdict(lambda: 1)
         self.redaction_history = []  # Track all redactions
 
         logger.info("EntityRedactor initialized with format: %s", default_format)
@@ -115,10 +116,9 @@ class EntityRedactor:
         logger.info("Starting redaction of %d entities", len(entities))
         logger.info("Using format: %s", format_str)
 
-        # Sort entities by start position (reverse order for safe replacement)
-        sorted_entities = sorted(entities, key=lambda x: x["start"], reverse=True)
+        # Sort entities by start position ascending for forward-pass assembly
+        sorted_entities = sorted(entities, key=lambda x: x["start"])
 
-        redacted_text = text
         redaction_details = []
         re_identification_map = {}
 
@@ -126,7 +126,8 @@ class EntityRedactor:
             # Build entity consistency map first
             entity_to_id = self._build_entity_id_map(entities)
 
-        # Process entities in reverse order to preserve indices
+        # First pass: compute placeholders for each entity
+        replacements_to_apply: list[tuple[int, int, str]] = []
         for entity in sorted_entities:
             try:
                 label = entity["label"].upper()
@@ -150,8 +151,7 @@ class EntityRedactor:
                     placeholder = f"{label}_REDACTED"
                     redaction_id = f"{label}_STATIC"
 
-                # Apply redaction
-                redacted_text = redacted_text[:start_pos] + placeholder + redacted_text[end_pos:]
+                replacements_to_apply.append((start_pos, end_pos, placeholder))
 
                 # Create redaction detail
                 detail = RedactionDetail(
@@ -174,8 +174,15 @@ class EntityRedactor:
                 logger.error("Error redacting entity %s: %s", entity, str(e))
                 continue
 
-        # Sort redaction details by original position for output
-        redaction_details.sort(key=lambda x: x.start)
+        # Build output text in a single forward pass (O(N+L) instead of O(N*L))
+        segments: list[str] = []
+        prev_end = 0
+        for start_pos, end_pos, placeholder in replacements_to_apply:
+            segments.append(text[prev_end:start_pos])
+            segments.append(placeholder)
+            prev_end = end_pos
+        segments.append(text[prev_end:])
+        redacted_text = "".join(segments)
 
         result = {
             "anonymized_text": redacted_text,
@@ -214,16 +221,11 @@ class EntityRedactor:
         return entity_to_id
 
     def _generate_unique_id(self, label: str) -> str:
-        """Generate a unique ID for the given label."""
-        used_ids = self.used_ids_per_label[label]
-
-        # Start from 1 and find the next available ID
-        candidate_id = 1
-        while str(candidate_id) in used_ids:
-            candidate_id += 1
-
-        used_ids.add(str(candidate_id))
-        return str(candidate_id)
+        """Generate a unique ID for the given label using O(1) counter."""
+        id_val = self._next_id_per_label[label]
+        self._next_id_per_label[label] = id_val + 1
+        self.used_ids_per_label[label].add(str(id_val))
+        return str(id_val)
 
     def batch_redact(
         self, texts: list[str], all_entities: list[list[dict[str, Any]]], **kwargs
@@ -253,6 +255,7 @@ class EntityRedactor:
         # Snapshot state before pre-generation so entire batch is side-effect-free
         saved_map = self.entity_id_map.copy()
         saved_used_ids = {k: v.copy() for k, v in self.used_ids_per_label.items()}
+        saved_next_ids = dict(self._next_id_per_label)
 
         try:
             # Pre-generate IDs for all unique entities
@@ -271,6 +274,7 @@ class EntityRedactor:
         finally:
             self.entity_id_map = saved_map
             self.used_ids_per_label = defaultdict(set, saved_used_ids)
+            self._next_id_per_label = defaultdict(lambda: 1, saved_next_ids)
 
             logger.debug("Completed redaction for text %d/%d", i + 1, len(texts))
 
@@ -281,6 +285,7 @@ class EntityRedactor:
         """Clear redaction history and ID mappings."""
         self.entity_id_map.clear()
         self.used_ids_per_label.clear()
+        self._next_id_per_label.clear()
         self.redaction_history.clear()
         logger.info("Redaction history cleared")
 

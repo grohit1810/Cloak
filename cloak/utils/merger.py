@@ -8,7 +8,6 @@ Author: G Rohit (Enhanced from original)
 Version: 1.0.0
 """
 
-import copy
 import logging
 import threading
 from typing import Any
@@ -60,7 +59,7 @@ class EntityMerger:
         entities = sorted(entities, key=lambda x: x["start"])
 
         merged = []
-        current = copy.deepcopy(entities[0])
+        current = entities[0].copy()
         current["count"] = 1
 
         for next_entity in entities[1:]:
@@ -89,7 +88,7 @@ class EntityMerger:
                 # Cannot merge, add current to results and start new current
                 current.pop("count", None)  # Remove internal count field
                 merged.append(current)
-                current = copy.deepcopy(next_entity)
+                current = next_entity.copy()
                 current["count"] = 1
 
         # Add the last entity

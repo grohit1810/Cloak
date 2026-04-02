@@ -13,7 +13,6 @@ Version: 1.0.0
 """
 
 import logging
-import re
 import time
 from typing import Any
 
@@ -207,9 +206,11 @@ class CloakExtraction:
         start_time = time.time()
 
         try:
+            # Compute word count once — used for parallel decision and metadata
+            word_count = len(text.split())
+
             # Determine processing method
             if use_parallel is None:
-                word_count = len(re.findall(r"\S+", text))
                 use_parallel = word_count > chunk_size
 
             method_used = "parallel" if use_parallel else "single-pass"
@@ -221,7 +222,6 @@ class CloakExtraction:
                     text=text,
                     labels=labels,
                     chunk_size=chunk_size,
-                    max_workers=max_workers,
                     use_parallel=True,
                 )
             else:
@@ -287,7 +287,7 @@ class CloakExtraction:
                     if min_confidence is not None
                     else self.min_confidence,
                     "labels_processed": labels,
-                    "word_count": len(re.findall(r"\S+", text)),
+                    "word_count": word_count,
                     "auto_parallel_triggered": use_parallel if use_parallel is not None else None,
                 },
             }

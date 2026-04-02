@@ -13,6 +13,8 @@ import re
 
 logger = logging.getLogger(__name__)
 
+_WORD_PATTERN = re.compile(r"\S+")
+
 
 def chunk_text(text: str, chunk_size: int = 600) -> list[tuple[str, int]]:
     """
@@ -37,7 +39,7 @@ def chunk_text(text: str, chunk_size: int = 600) -> list[tuple[str, int]]:
 
     try:
         # Find all word spans (start/end indices) using regex
-        word_spans = [m.span() for m in re.finditer(r"\S+", text)]
+        word_spans = [m.span() for m in _WORD_PATTERN.finditer(text)]
 
         if not word_spans:
             logger.warning("No words found in text")
@@ -83,7 +85,7 @@ def estimate_chunk_count(text: str, chunk_size: int = 600) -> int:
         if not text or chunk_size <= 0:
             return 0
 
-        total_words = len(re.findall(r"\S+", text))
+        total_words = len(_WORD_PATTERN.findall(text))
         return (total_words + chunk_size - 1) // chunk_size
 
     except Exception as e:
@@ -155,7 +157,7 @@ def get_chunk_info(chunks: list[tuple[str, int]]) -> dict:
             }
 
         sizes = [len(chunk) for chunk, _ in chunks]
-        words = [len(re.findall(r"\S+", chunk)) for chunk, _ in chunks]
+        words = [len(_WORD_PATTERN.findall(chunk)) for chunk, _ in chunks]
 
         return {
             "total_chunks": len(chunks),

@@ -31,89 +31,33 @@ class CacheManager:
             maxsize: Maximum number of cached results (default: 128)
         """
         self.maxsize = maxsize
-        self.cache_hits = 0
-        self.cache_misses = 0
-        self.total_requests = 0
 
         logger.info("CacheManager initialized with maxsize: %d", maxsize)
 
     def create_cached_extractor(self, extractor_func):
-        """
-        Create a cached version of an extractor function.
-        This implements @lru_cache strategy.
-
-        Args:
-            extractor_func: Function that takes (text, labels_tuple) and returns entities
-
-        Returns:
-            Cached version of the function
-        """
+        """Create a cached version of an extractor function."""
 
         @functools.lru_cache(maxsize=self.maxsize)
         def cached_extractor(text: str, labels_tuple: tuple[str, ...]):
-            """
-            Cached extraction function.
-            Labels must be passed as a tuple for caching to work.
-            """
-            # Convert tuple back to list for the actual extractor
             labels_list = list(labels_tuple) if labels_tuple else None
-            result = extractor_func(text, labels_list)
-            return result
+            return extractor_func(text, labels_list)
 
-        # Wrap to handle cache hit tracking
-        original_cached = cached_extractor
+        return cached_extractor
 
-        def tracking_cached_extractor(text: str, labels_tuple: tuple[str, ...]):
-            # Track total requests
-            self.total_requests += 1
-
-            # Check if this would be a cache hit
-            cache_info_before = original_cached.cache_info()
-            result = original_cached(text, labels_tuple)
-            cache_info_after = original_cached.cache_info()
-
-            # Update our tracking
-            if cache_info_after.hits > cache_info_before.hits:
-                self.cache_hits += 1
-            else:
-                self.cache_misses += 1
-
-            return result
-
-        # Attach cache_info method and other lru_cache attributes
-        tracking_cached_extractor.cache_info = original_cached.cache_info
-        tracking_cached_extractor.cache_clear = original_cached.cache_clear
-
-        return tracking_cached_extractor
-
-    def get_cache_stats(self) -> dict[str, Any]:
-        """
-        Get cache performance statistics.
-
-        Returns:
-            Dictionary with cache statistics
-        """
-        hit_rate = (self.cache_hits / self.total_requests * 100) if self.total_requests > 0 else 0
-        miss_rate = (
-            (self.cache_misses / self.total_requests * 100) if self.total_requests > 0 else 0
-        )
-
-        return {
-            "cache_hits": self.cache_hits,
-            "cache_misses": self.cache_misses,
-            "total_requests": self.total_requests,
-            "hit_rate_percentage": round(hit_rate, 2),
-            "miss_rate_percentage": round(miss_rate, 2),
-            "maxsize": self.maxsize,
-            "efficiency": "High" if hit_rate > 70 else "Medium" if hit_rate > 40 else "Low",
-        }
-
-    def clear_stats(self):
-        """Reset cache statistics."""
-        self.cache_hits = 0
-        self.cache_misses = 0
-        self.total_requests = 0
-        logger.info("Cache statistics reset")
+    def get_cache_stats(self, cached_func=None) -> dict[str, Any]:
+        """Get cache performance statistics derived from lru_cache info."""
+        if cached_func and hasattr(cached_func, "cache_info"):
+            info = cached_func.cache_info()
+            total = info.hits + info.misses
+            hit_rate = (info.hits / total * 100) if total > 0 else 0
+            return {
+                "cache_hits": info.hits,
+                "cache_misses": info.misses,
+                "total_requests": total,
+                "hit_rate_percentage": round(hit_rate, 2),
+                "maxsize": self.maxsize,
+            }
+        return {"maxsize": self.maxsize, "total_requests": 0}
 
 
 class CachedEntityExtractor:
@@ -165,48 +109,39 @@ class CachedEntityExtractor:
             return self._uncached_predict(text, labels)
 
         # Labels are sorted to normalize the cache key — GLiNER output is label-order-independent
-        labels_tuple = tuple(sorted(labels)) if labels else tuple()
+        labels_tuple = tuple(sorted(labels)) if labels else ()
 
         try:
-            return self._cached_predict(text, labels_tuple)
+            result = self._cached_predict(text, labels_tuple)
+            return list(result)  # Defensive copy — don't expose cached list
         except Exception as e:
-            logger.error("Cached prediction failed: %s", str(e))
+            logger.error("Cached prediction failed: %s", e)
             # Fallback to uncached prediction
             return self._uncached_predict(text, labels)
 
     def get_cache_info(self) -> dict[str, Any]:
-        """
-        Get detailed cache information including built-in lru_cache stats.
-
-        Returns:
-            Dictionary with cache information
-        """
+        """Get detailed cache information from lru_cache stats."""
         try:
-            cache_info = self._cached_predict.cache_info()
-            manager_stats = self.cache_manager.get_cache_stats()
-
+            info = self._cached_predict.cache_info()
+            total = info.hits + info.misses
             return {
-                "lru_cache_hits": cache_info.hits,
-                "lru_cache_misses": cache_info.misses,
-                "lru_cache_current_size": cache_info.currsize,
-                "lru_cache_max_size": cache_info.maxsize,
-                "lru_cache_hit_ratio": cache_info.hits / (cache_info.hits + cache_info.misses)
-                if (cache_info.hits + cache_info.misses) > 0
-                else 0,
-                "manager_stats": manager_stats,
+                "lru_cache_hits": info.hits,
+                "lru_cache_misses": info.misses,
+                "lru_cache_current_size": info.currsize,
+                "lru_cache_max_size": info.maxsize,
+                "lru_cache_hit_ratio": info.hits / total if total > 0 else 0,
             }
         except Exception as e:
-            logger.error("Failed to get cache info: %s", str(e))
+            logger.error("Failed to get cache info: %s", e)
             return {"error": str(e)}
 
     def clear_cache(self):
-        """Clear the cache and reset statistics."""
+        """Clear the cache."""
         try:
             self._cached_predict.cache_clear()
-            self.cache_manager.clear_stats()
             logger.info("Cache cleared successfully")
         except Exception as e:
-            logger.error("Failed to clear cache: %s", str(e))
+            logger.error("Failed to clear cache: %s", e)
 
     def get_model_info(self) -> dict[str, str]:
         """Get information about the underlying model."""

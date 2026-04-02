@@ -190,6 +190,46 @@ class GLiNERModel:
                 flat_ner=flat_ner,
             )
 
+    def batch_inference(
+        self,
+        texts: list[str],
+        labels: list[str],
+        threshold: float = 0.5,
+        flat_ner: bool = True,
+        batch_size: int = 8,
+    ) -> list[list[dict[str, Any]]]:
+        """Run batched NER inference on multiple texts.
+
+        More efficient than calling predict_entities N times because
+        the model processes texts in a single batched forward pass.
+        """
+        if not texts:
+            return []
+        # Filter empty texts, keeping index mapping
+        valid_texts = []
+        valid_indices = []
+        for i, t in enumerate(texts):
+            if t and t.strip():
+                valid_texts.append(t)
+                valid_indices.append(i)
+        if not valid_texts:
+            return [[] for _ in texts]
+
+        with self._lock:
+            valid_results = self.model.inference(
+                valid_texts,
+                labels,
+                threshold=threshold,
+                flat_ner=flat_ner,
+                batch_size=batch_size,
+            )
+
+        # Map results back to original indices
+        results: list[list[dict[str, Any]]] = [[] for _ in texts]
+        for idx, res in zip(valid_indices, valid_results):
+            results[idx] = res
+        return results
+
     def get_model_info(self) -> dict[str, Any]:
         return {
             "model_path": self.model_path,

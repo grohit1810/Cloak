@@ -14,6 +14,26 @@ from ..models.gliner_model import GLiNERModel
 logger = logging.getLogger(__name__)
 
 
+def _apply_masks(text: str, spans: list[tuple[int, int]]) -> str:
+    """Apply space-masking to text at given spans. O(L) single pass."""
+    if not spans:
+        return text
+    sorted_spans = sorted(spans)
+    segments: list[str] = []
+    prev_end = 0
+    for start, end in sorted_spans:
+        if start < prev_end:
+            start = prev_end  # Handle overlapping spans
+        if start >= len(text):
+            break
+        segments.append(text[prev_end:start])
+        mask_end = min(end, len(text))
+        segments.append(" " * (mask_end - start))
+        prev_end = mask_end
+    segments.append(text[prev_end:])
+    return "".join(segments)
+
+
 class EntityExtractor:
     """Multi-pass entity extractor with masking between passes.
 
@@ -40,10 +60,10 @@ class EntityExtractor:
 
         all_entities: list[dict[str, Any]] = []
         processed_spans: set[tuple[int, int]] = set()
-        mutable_text_list = list(text)
+        masked_spans: list[tuple[int, int]] = []
 
         for pass_num in range(max_passes):
-            current_text = "".join(mutable_text_list)
+            current_text = _apply_masks(text, masked_spans)
             threshold = FIRST_PASS_THRESHOLD if pass_num == 0 else SUBSEQUENT_PASS_THRESHOLD
 
             try:
@@ -79,8 +99,7 @@ class EntityExtractor:
             all_entities.extend(unique_new)
 
             for entity in unique_new:
-                for i in range(entity["start"], min(entity["end"], len(mutable_text_list))):
-                    mutable_text_list[i] = " "
+                masked_spans.append((entity["start"], entity["end"]))
 
         all_entities.sort(key=lambda x: x["start"])
         return all_entities

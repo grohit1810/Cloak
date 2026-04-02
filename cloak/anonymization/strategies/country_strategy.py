@@ -24,6 +24,7 @@ class CountryReplacementStrategy:
         """Initialize with country data."""
         self.countries = self._load_countries()
         self.supported_labels = {"country", "location", "nationality", "place"}
+        self._countries_lower = frozenset(c.lower() for c in self.countries)
 
     def _load_countries(self) -> list[str]:
         """Load country list from data file or use default list."""
@@ -105,9 +106,8 @@ class CountryReplacementStrategy:
             # Check if the original text looks like a country
             if self._is_country_like(original_text):
                 # Replace with a different country
-                available_countries = [
-                    c for c in self.countries if c.lower() != original_text.lower()
-                ]
+                original_lower = original_text.lower()
+                available_countries = [c for c in self.countries if c.lower() != original_lower]
                 if available_countries:
                     return random.choice(available_countries)
             elif label == "location":
@@ -125,27 +125,7 @@ class CountryReplacementStrategy:
 
     def _is_country_like(self, text: str) -> bool:
         """Check if text looks like a country name."""
-        text_lower = text.lower()
-
-        # Check against known countries (case-insensitive)
-        for country in self.countries:
-            if country.lower() == text_lower:
-                return True
-
-        # Check for common country indicators
-        country_indicators = [
-            "united states",
-            "usa",
-            "uk",
-            "united kingdom",
-            "china",
-            "india",
-            "brazil",
-            "russia",
-            "japan",
-        ]
-
-        return any(indicator in text_lower for indicator in country_indicators)
+        return text.lower() in self._countries_lower
 
     def _country_to_nationality(self, country: str) -> str:
         """Convert country name to nationality (simplified)."""

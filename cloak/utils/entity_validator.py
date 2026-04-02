@@ -8,7 +8,6 @@ Author: G Rohit (Enhanced from original)
 Version: 1.0.0
 """
 
-import copy
 import logging
 import re
 from typing import Any
@@ -208,7 +207,7 @@ class EntityValidator:
     def _clean_entity(self, entity: dict[str, Any], text: str) -> dict[str, Any]:
         """Clean and normalize entity data."""
         try:
-            cleaned = copy.deepcopy(entity)
+            cleaned = entity.copy()
 
             # Normalize label
             if "label" in cleaned:
@@ -222,7 +221,7 @@ class EntityValidator:
 
         except Exception as e:
             logger.error("Entity cleaning error: %s", e)
-            return copy.deepcopy(entity)
+            return entity.copy()
 
     def resolve_overlaps(
         self, entities: list[dict[str, Any]], strategy: str = "highest_confidence"
@@ -243,7 +242,7 @@ class EntityValidator:
         try:
             overlaps = self._detect_overlaps(entities)
             if not overlaps:
-                return [copy.deepcopy(e) for e in entities]
+                return [e.copy() for e in entities]
 
             logger.info(
                 "Resolving %d overlapping entity pairs using '%s' strategy", len(overlaps), strategy
@@ -283,18 +282,24 @@ class EntityValidator:
             return entities
 
     def _detect_overlaps(self, entities: list[dict[str, Any]]) -> list[tuple]:
-        """Detect overlapping entities."""
-        overlaps = []
-
+        """Detect overlapping entities using sweep-line algorithm. O(n log n)."""
+        if len(entities) <= 1:
+            return []
         try:
-            for i, entity1 in enumerate(entities):
-                for j, entity2 in enumerate(entities[i + 1 :], i + 1):
-                    if self._entities_overlap(entity1, entity2):
-                        overlaps.append((i, j))
+            sorted_indices = sorted(range(len(entities)), key=lambda i: entities[i].get("start", 0))
+            overlaps = []
+            for k in range(len(sorted_indices) - 1):
+                i = sorted_indices[k]
+                end1 = entities[i].get("end", 0)
+                for m in range(k + 1, len(sorted_indices)):
+                    j = sorted_indices[m]
+                    if entities[j].get("start", 0) >= end1:
+                        break
+                    overlaps.append((i, j))
+            return overlaps
         except Exception as e:
             logger.error("Error detecting overlaps: %s", e)
-
-        return overlaps
+            return []
 
     def _entities_overlap(self, entity1: dict[str, Any], entity2: dict[str, Any]) -> bool:
         """Check if two entities have overlapping positions."""
