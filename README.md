@@ -7,9 +7,10 @@
 ## Features
 
 - **Zero-shot NER** — works with any entity type without retraining, powered by GLiNER
+- **Zero-config setup** — auto-downloads the default model from HuggingFace and exports to ONNX on first run
 - **Dual backend** — ONNX-optimized (default) or PyTorch inference via a single `use_onnx` flag
 - **Multi-pass extraction** — runs the model multiple times with decreasing confidence thresholds (0.5 -> 0.30), masking found entities between passes to discover more
-- **Parallel processing** — automatic chunking and ThreadPoolExecutor for large texts
+- **Batched inference** — automatic chunking with native GLiNER batched inference for large texts
 - **Numbered redaction** — consistent placeholders (`#1_PERSON_REDACTED`) with optional re-identification mapping
 - **Synthetic replacement** — Faker-powered realistic alternatives with pluggable strategies per entity type
 - **Thread-safe** — all shared state protected with locks; safe for concurrent use
@@ -39,11 +40,10 @@ pip install -e ".[gpu]"
 ```python
 import cloak
 
-# Extract entities
+# Extract entities — no model_path needed, auto-downloads on first run
 result = cloak.extract(
     "John works at Google Inc.",
     labels=["person", "company"],
-    model_path="urchade/gliner_large-v2.1"  # HuggingFace model ID or local path
 )
 print(result["entities"])
 # [{"text": "John", "label": "person", "start": 0, "end": 4, "score": 0.95}, ...]
@@ -52,7 +52,6 @@ print(result["entities"])
 result = cloak.redact(
     "Alice lives in Paris",
     labels=["person", "location"],
-    model_path="urchade/gliner_large-v2.1"
 )
 print(result["anonymized_text"])
 # "#1_PERSON_REDACTED lives in #1_LOCATION_REDACTED"
@@ -61,7 +60,6 @@ print(result["anonymized_text"])
 result = cloak.replace(
     "Bob Smith works at Microsoft",
     labels=["person", "company"],
-    model_path="urchade/gliner_large-v2.1"
 )
 print(result["anonymized_text"])
 # "David Johnson works at TechCorp Inc"
@@ -71,27 +69,37 @@ result = cloak.replace_with_data(
     "Jane works at Apple",
     labels=["person", "company"],
     user_replacements={"person": ["Anonymous User"], "company": "REDACTED_COMPANY"},
-    model_path="urchade/gliner_large-v2.1"
+)
+
+# Use a specific model or local path
+result = cloak.extract(
+    "text",
+    labels=["person"],
+    model_path="urchade/gliner_large-v2.1",  # HuggingFace ID or local path
+    use_onnx=False,                           # Use PyTorch instead of ONNX
 )
 ```
 
 ### Command Line Interface
 
 ```bash
-# Basic extraction
+# Basic extraction — auto-downloads default model on first run
+cloak --text "John works at Google" --labels person company
+
+# Use a specific model
 cloak --model urchade/gliner_large-v2.1 --text "John works at Google" --labels person company
 
 # Redact with custom placeholder format
-cloak --model ./local-model --text "Alice and Bob work here" --redact --placeholder "#{id}_{label}_HIDDEN"
+cloak --text "Alice and Bob work here" --redact --placeholder "#{id}_{label}_HIDDEN"
 
 # Replace with synthetic data (PyTorch backend)
-cloak --model urchade/gliner_large-v2.1 --text-file input.txt --replace --no-onnx --labels person location date
+cloak --text-file input.txt --replace --no-onnx --labels person location date
 
-# Parallel processing for large files
-cloak --model ./model --text-file large.txt --parallel --workers 8 --chunk-size 500
+# Chunked processing for large files
+cloak --text-file large.txt --parallel --chunk-size 500
 
 # Validation and overlap resolution
-cloak --model ./model --text "Text..." --overlap-strategy longest --verbose
+cloak --text "Text..." --overlap-strategy longest --verbose
 ```
 
 ### Class-Based API (Full Control)
@@ -135,21 +143,21 @@ Input Text
     v
 +---------------------+
 |   Text Chunking     |  <-- Word-based chunks (600 words default)
-|   (if parallel)     |      Preserves character offsets
+|   (if large text)   |      Preserves character offsets
 +---------------------+
     |
     v
 +---------------------+
-|  Multi-pass NER     |  <-- GLiNER model (ONNX or PyTorch)
-|  Extraction         |      Pass 1: threshold 0.5
-|                     |      Pass 2: threshold 0.3 (on masked text)
+|  Batched NER        |  <-- GLiNER model (ONNX or PyTorch)
+|  Inference          |      All chunks in single batched forward pass
+|                     |      Multi-pass: threshold 0.5 then 0.3
 +---------------------+
     |
     v
 +---------------------+
 |  Entity Validation  |  <-- Confidence filtering
 |  & Overlap          |      Position/text consistency checks
-|  Resolution         |      Overlap resolution (3 strategies)
+|  Resolution         |      Sweep-line overlap resolution (3 strategies)
 +---------------------+
     |
     v
@@ -160,7 +168,7 @@ Input Text
     |
     v
 +---------------------+
-|  Anonymization      |  <-- Redaction: numbered placeholders
+|  Anonymization      |  <-- Redaction: segment-join numbered placeholders
 |  (Optional)         |      Replacement: Faker / custom strategies
 +---------------------+
     |
@@ -179,11 +187,11 @@ cloak/
   cli.py                   # Command-line interface
 
   models/
-    gliner_model.py        # GLiNER wrapper (ONNX + PyTorch, thread-safe)
+    gliner_model.py        # GLiNER wrapper (ONNX + PyTorch, auto-download, thread-safe)
 
   extraction/
-    extractor.py           # Multi-pass entity extraction with masking
-    parallel_processor.py  # ThreadPoolExecutor parallel processing
+    extractor.py           # Multi-pass entity extraction with span-based masking
+    parallel_processor.py  # Batched inference for chunked text
     chunker.py             # Word-based text chunking
 
   anonymization/
@@ -208,10 +216,11 @@ cloak/
 
 ### Key Design Decisions
 
-- **Dependency injection**: `GLiNERModel` is created once and shared across extractors. The parallel processor reuses the same model with thread-safe locking.
+- **Dependency injection**: `GLiNERModel` is created once and shared across extractors via batched inference.
+- **Batched inference**: Large texts are chunked and processed in a single batched model call, avoiding thread overhead.
 - **Strategy pattern**: Replacement strategies implement the `ReplacementStrategy` Protocol. New strategies can be added without modifying existing code.
 - **Thread safety**: All shared state (model inference, singletons, merge stats) is protected with `threading.Lock`.
-- **Immutability**: Entity dicts are deep-copied through the validation/merging pipeline to prevent mutation side effects.
+- **Auto-download**: On first run, the default model is downloaded from HuggingFace, exported to ONNX, and cached at `~/.cache/cloak/`. Configurable via `CLOAK_CACHE_DIR` env var.
 
 ## Configuration
 
@@ -219,12 +228,11 @@ cloak/
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `model_path` | Required | HuggingFace model ID or local path |
+| `model_path` | `urchade/gliner_large-v2.1` | HuggingFace model ID or local path (auto-downloaded on first run) |
 | `use_onnx` | `True` | Use ONNX backend (faster) or PyTorch |
 | `max_passes` | `2` | Multi-pass extraction rounds |
 | `min_confidence` | `0.3` | Minimum entity confidence threshold |
-| `chunk_size` | `600` | Words per chunk for parallel processing |
-| `max_workers` | `4` | Thread pool size for parallel processing |
+| `chunk_size` | `600` | Words per chunk for batched processing |
 | `overlap_strategy` | `"highest_confidence"` | How to resolve overlapping entities (`"highest_confidence"`, `"longest"`, `"first"`) |
 
 ### Anonymization Options
@@ -236,6 +244,12 @@ cloak/
 | `ensure_consistency` | `True` | Same entity text gets same replacement |
 | `include_re_id_map` | `False` | Include reverse mapping (opt-in for security) |
 | `seed` | `None` | Faker seed for reproducible replacements |
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CLOAK_CACHE_DIR` | `~/.cache/cloak` | Directory for cached ONNX model exports |
 
 ## Development
 
